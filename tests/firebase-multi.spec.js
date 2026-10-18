@@ -37,6 +37,20 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await expect(host.locator("#loading")).toBeHidden();
   await expect(guest.locator("#loading")).toBeHidden();
 
+  const expectedRanks = [1, 8, 2, 3, 4, 5, 6, 7];
+  await host.evaluate(() => {
+    teams.forEach(team => {
+      team.sessionPicks = [{ 名前: "順位同期テスト", ポイント: team.id === 1 ? 0 : (9 - team.id) * 1000 }];
+    });
+    determineNextSessionRanks();
+  });
+  await expect.poll(() => guest.evaluate(() => teams.map(team => team.rank))).toEqual(expectedRanks);
+  await expect.poll(() => host.evaluate(() => teams.map(team => team.rank))).toEqual(expectedRanks);
+  await host.evaluate(() => nextSession());
+  await expect(host.locator("#currentSessionLabel")).toContainText("第 2 周目");
+  await expect(guest.locator("#currentSessionLabel")).toContainText("第 2 周目");
+  await expect.poll(() => guest.evaluate(() => teams.map(team => team.rank))).toEqual(expectedRanks);
+
   const sharedName = await host.locator("#playerDropdown option").nth(1).getAttribute("value");
   expect(sharedName).toBeTruthy();
   await host.locator("#playerDropdown").selectOption(sharedName);
@@ -46,10 +60,14 @@ test("host and guest keep lottery results in their pick history", async ({ brows
 
   await expect(host.locator("#lotteryModal")).toBeVisible();
   await expect(guest.locator("#lotteryModal")).toBeVisible();
-  for (const page of [host, guest]) {
-    await expect(page.locator(".envelope.selectable").first()).toBeVisible();
-    await page.locator(".envelope.selectable").first().click({ force: true });
-  }
+  await expect(host.locator("#lotteryDetails")).toContainText("第1引: E2E Guest");
+  await expect(guest.locator("#lotteryDetails")).toContainText("第1引: E2E Guest");
+  await expect.poll(() => guest.locator(".envelope.selectable").count()).toBeGreaterThan(0);
+  await expect(host.locator(".envelope.selectable")).toHaveCount(0);
+  await guest.locator(".envelope.selectable").first().click({ force: true });
+  await expect(guest.locator(".envelope.selectable")).toHaveCount(0);
+  await expect.poll(() => host.locator(".envelope.selectable").count(), { timeout: 30_000 }).toBeGreaterThan(0);
+  await host.locator(".envelope.selectable").first().click({ force: true });
 
   await expect(host.locator("#lotteryResultStamp")).toContainText("交渉権獲得");
   await expect(guest.locator("#lotteryResultStamp")).toContainText("交渉権獲得");

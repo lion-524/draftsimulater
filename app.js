@@ -569,6 +569,14 @@ function applyConfirmedPicks(list) {
   });
 }
 
+function applySessionRanks(ranks = []) {
+  ranks.forEach(({ teamId, rank }) => {
+    if (teams[teamId]) teams[teamId].rank = rank;
+  });
+  renderTeams();
+  updateRoundBoardVisualizer(round);
+}
+
 function setupDraftGameListeners() {
   db.ref(`rooms/${currentRoomId}/roundEvent`).on('value', async snap => {
     const event = snap.val();
@@ -676,9 +684,14 @@ function setupDraftGameListeners() {
       executeSyncedWaiverStep(event.slot, event.playerName, event.round || round);
     }
 
-    if (event.type === "next_session_start") {
+    if (event.type === "next_session_start" && !isHost) {
+      applySessionRanks(event.ranks);
       currentSession = event.session;
       startSession(currentSession);
+    }
+
+    if (event.type === "session_ranks" && !isHost) {
+      applySessionRanks(event.ranks);
     }
   });
 
@@ -843,6 +856,8 @@ function confirmInitialRankAndStart() {
 }
 
 function determineNextSessionRanks() {
+  if (gameMode === "multi" && !isHost) return;
+
   let rankingList = teams.map(t => ({
     team: t,
     point: t.sessionPicks.filter(p => !p.isPass).reduce((sum, p) => sum + Number(p.ポイント || 0), 0),
@@ -861,7 +876,15 @@ function determineNextSessionRanks() {
   if (gameMode === "multi" && isHost) {
     const updates = {};
     teams.forEach(t => { updates[`slots/slot_${t.id}/rank`] = t.rank; });
-    db.ref(`rooms/${currentRoomId}`).update(updates);
+    const ranks = teams.map(t => ({ teamId: t.id, rank: t.rank }));
+    db.ref(`rooms/${currentRoomId}`).update(updates).then(() => {
+      return db.ref(`rooms/${currentRoomId}/roundEvent`).set({
+        type: "session_ranks",
+        session: currentSession,
+        ranks,
+        ts: Date.now()
+      });
+    });
   }
 }
 
@@ -2160,7 +2183,12 @@ function endCurrentSession() {
 
   if (currentSession < 7) {
     document.getElementById("roundDisplay").innerText = `第 ${currentSession} 周目 終了`;
-    document.getElementById("nextSessionBtn").style.display = "inline-block";
+    const nextSessionBtn = document.getElementById("nextSessionBtn");
+    const canStartNextSession = gameMode !== "multi" || isHost;
+    nextSessionBtn.style.display = canStartNextSession ? "inline-block" : "none";
+    if (!canStartNextSession) {
+      document.getElementById("roundDisplay").innerText = `第 ${currentSession} 周目 終了（ホストが次周を開始するのを待機中）`;
+    }
   } else {
     isDraftCompleted = true;
     document.getElementById("roundDisplay").innerText = "全 7 周 ドラフト会議 完全終了";
@@ -2327,12 +2355,15 @@ function closeAndReleaseRoom() {
   }
 }
 
-function nextSession() {
+async function nextSession() {
   let nextS = currentSession + 1;
-  if (gameMode === "multi" && isHost) {
-    db.ref(`rooms/${currentRoomId}/roundEvent`).set({
+  if (gameMode === "multi") {
+    if (!isHost) return;
+    const ranks = teams.map(t => ({ teamId: t.id, rank: t.rank }));
+    await db.ref(`rooms/${currentRoomId}/roundEvent`).set({
       type: "next_session_start",
       session: nextS,
+      ranks,
       ts: Date.now()
     });
   }
@@ -2665,7 +2696,7 @@ function handleSyncedLotteryState(lData) {
     const activeTeam = teams[activeSlot];
     const stepNum = stepIdx + 1;
 
-    const isMyTurn = (Number(activeSlot) === Number(myPlayerSlot)) || (activeTeam && activeTeam.isUser === true);
+    const isMyTurn = Number(activeSlot) === Number(myPlayerSlot);
 
     if (isMyTurn) {
       instructionEl.innerText = `👉 第 ${stepNum} 抽選者【あなた】の番です！引く封筒を1つ選んでください。`;
