@@ -149,12 +149,19 @@ test("soccer and baseball formations show player photos and sync defensive picks
     return allMasterData.slice(0, 2).map(member => ({ name: member.名前, photo: member.写真 }));
   });
 
+  await page.evaluate(() => window.switchSportTab("idol"));
+  const idolSelect = page.locator(".idol-select").first();
+  await idolSelect.selectOption(firstMember.name);
+  await expect(page.locator("#slot-row1-1 .member-avatar img")).toHaveAttribute("src", firstMember.photo);
+  await expect(page.locator("#slot-row1-1 .member-avatar")).toHaveCSS("border-radius", "4px");
+
   await page.evaluate(() => window.switchSportTab("soccer"));
   const soccerSelect = page.locator(".soccer-player-slot .sport-player-select").first();
   await soccerSelect.click();
   await soccerSelect.selectOption(firstMember.name);
   await expect(page.locator(".soccer-player-slot .sport-player-name").first()).toHaveText(firstMember.name);
   await expect(page.locator(".soccer-player-slot .sport-player-image").first()).toHaveAttribute("src", firstMember.photo);
+  await expect(page.locator(".soccer-player-slot .sport-player-image").first()).toHaveCSS("border-radius", "4px");
 
   await page.evaluate(() => {
     document.getElementById("dhCheck").checked = false;
@@ -169,6 +176,7 @@ test("soccer and baseball formations show player photos and sync defensive picks
   await expect(pitcherSelect).toHaveValue(secondMember.name);
   await expect(page.locator('.baseball-player-slot[data-position="P"] .sport-player-name')).toHaveText(secondMember.name);
   await expect(page.locator('.baseball-player-slot[data-position="P"] .sport-player-image')).toHaveAttribute("src", secondMember.photo);
+  await expect(page.locator('.baseball-player-slot[data-position="P"] .sport-player-image')).toHaveCSS("border-radius", "4px");
 
   await pitcherSelect.selectOption(firstMember.name);
   await expect(battingSelect).toHaveValue(firstMember.name);

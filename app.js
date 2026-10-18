@@ -2877,17 +2877,16 @@ function getUserPicksOptionsHtml() {
     targetTeam = teams[myPlayerSlot];
   }
 
-  if (targetTeam && targetTeam.allPicks && targetTeam.allPicks.length > 0) {
-    const userPicks = targetTeam.allPicks.filter(p => !p.isPass);
-    if (userPicks.length > 0) {
-      let html = `<option value="">-- 未配置 --</option>`;
-      userPicks.forEach(p => {
-        const originLabel = typeof normalizeOrigin === 'function' ? normalizeOrigin(p.出身) : (p.出身 || "高卒");
-        const photoUrl = p.photo || p.写真 || p.photoUrl || "";
-        html += `<option value="${p.名前}" data-photo="${photoUrl}">${p.名前} (${originLabel}${p.所属 ? ` / ${p.所属}` : ''})</option>`;
-      });
-      return html;
-    }
+  const availableMembers = targetTeam?.allPicks?.filter(p => !p.isPass) || [];
+  if (availableMembers.length > 0) {
+    let html = `<option value="">-- 未配置 --</option>`;
+    availableMembers.forEach(p => {
+      const originLabel = typeof normalizeOrigin === 'function' ? normalizeOrigin(p.出身) : (p.出身 || "高卒");
+      const photoUrl = p.photo || p.写真 || p.photoUrl || "";
+      const affiliation = p.所属 ? ` / ${p.所属}` : "";
+      html += `<option value="${escapeHtml(p.名前)}" data-photo="${escapeHtml(photoUrl)}">${escapeHtml(p.名前)} (${escapeHtml(originLabel)}${escapeHtml(affiliation)})</option>`;
+    });
+    return html;
   }
   
   return `
@@ -2971,7 +2970,7 @@ function buildStageSlots(row1Count, row2Count, row3Count) {
       slot.id = `slot-${rowId}-${i}`;
       slot.innerHTML = `
         ${isCenter ? `<div class="center-crown" style="font-size:10px; color:#ffd700; margin-bottom:2px;">${crownLabel}</div>` : ''}
-        <div class="member-avatar" style="width:45px; height:45px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#455a64; margin:0 auto 4px auto; color:#fff; font-size:18px;">👤</div>
+        <div class="member-avatar" style="width:48px; height:60px; border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#455a64; margin:0 auto 4px auto; color:#fff; font-size:18px;">👤</div>
         <div class="member-slot-name" style="font-size:11px; font-weight:bold; color:#fff; text-align:center;">未配置</div>
       `;
       rowEl.appendChild(slot);
