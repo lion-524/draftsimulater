@@ -36,6 +36,8 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await expect(guest.locator("#playerDropdown option").first()).toBeAttached();
   await expect(host.locator("#loading")).toBeHidden();
   await expect(guest.locator("#loading")).toBeHidden();
+  expect(await host.evaluate(() => allMasterData[0].名前)).toBe("岩瀬 佑美子");
+  expect(await host.evaluate(() => allMasterData[0].ポイント)).toBe(505);
 
   const expectedRanks = [1, 8, 2, 3, 4, 5, 6, 7];
   await host.evaluate(() => {
@@ -49,7 +51,21 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await host.evaluate(() => nextSession());
   await expect(host.locator("#currentSessionLabel")).toContainText("第 2 周目");
   await expect(guest.locator("#currentSessionLabel")).toContainText("第 2 周目");
-  await expect.poll(() => guest.evaluate(() => teams.map(team => team.rank))).toEqual(expectedRanks);
+  await expect.poll(() => guest.evaluate(() => teams.map(team => team.rank))).toEqual(expectedRanks).catch(async error => {
+    console.log("Expected ranks:", expectedRanks);
+    console.log("Host ranks:", await host.evaluate(() => teams.map(team => team.rank)));
+    console.log("Guest ranks:", await guest.evaluate(() => teams.map(team => team.rank)));
+    console.log("Start event:", await host.evaluate(async () => (await db.ref("rooms/e2e123/roundEvent").once("value")).val()));
+    throw error;
+  });
+
+  for (const page of [host, guest]) {
+    await page.evaluate(() => {
+      teams[0].sessionPicks = [{ 名前: "前巡テスト指名", draftRound: 1, 出身: "高卒", 所属: "" }];
+      updateRoundBoardVisualizer(2);
+    });
+    await expect(page.locator("#roundBoardGrid")).not.toContainText("前巡テスト指名");
+  }
 
   const sharedName = await host.locator("#playerDropdown option").nth(1).getAttribute("value");
   expect(sharedName).toBeTruthy();
@@ -73,6 +89,14 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await expect(guest.locator("#lotteryResultStamp")).toContainText("交渉権獲得");
   await expect(host.locator("#teamsContainer")).toContainText(sharedName);
   await expect(guest.locator("#teamsContainer")).toContainText(sharedName);
+  const sharedOwnerSlots = await host.evaluate(name => teams.filter(team =>
+    team.allPicks.some(pick => !pick.isPass && pick.名前 === name)
+  ).map(team => team.id), sharedName);
+  const guestSharedOwnerSlots = await guest.evaluate(name => teams.filter(team =>
+    team.allPicks.some(pick => !pick.isPass && pick.名前 === name)
+  ).map(team => team.id), sharedName);
+  expect(sharedOwnerSlots).toHaveLength(1);
+  expect(guestSharedOwnerSlots).toEqual(sharedOwnerSlots);
 
   const hostWon = (await host.locator("#lotteryResultStamp").innerText()).includes("E2E Host");
   const loserPage = hostWon ? guest : host;
@@ -89,8 +113,63 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await expect(guest.locator("#teamsContainer")).toContainText(nextName);
   await expect(host.locator("#teamsContainer")).toContainText(sharedName);
   await expect(guest.locator("#teamsContainer")).toContainText(sharedName);
+  const hostOwnersAfterRePick = await host.evaluate(name => teams.filter(team =>
+    team.allPicks.some(pick => !pick.isPass && pick.名前 === name)
+  ).map(team => team.id), nextName);
+  const guestOwnersAfterRePick = await guest.evaluate(name => teams.filter(team =>
+    team.allPicks.some(pick => !pick.isPass && pick.名前 === name)
+  ).map(team => team.id), nextName);
+  expect(hostOwnersAfterRePick).toHaveLength(1);
+  expect(guestOwnersAfterRePick).toEqual(hostOwnersAfterRePick);
+
+  const duplicateOwners = await host.evaluate(() => {
+    const ownersByPick = new Map();
+    teams.forEach(team => team.allPicks.filter(pick => !pick.isPass).forEach(pick => {
+      const key = `${pick.session}:${pick.名前}`;
+      const owners = ownersByPick.get(key) || [];
+      owners.push(team.id);
+      ownersByPick.set(key, owners);
+    }));
+    return [...ownersByPick].filter(([, owners]) => new Set(owners).size > 1);
+  });
+  expect(duplicateOwners).toEqual([]);
   expect(errors).toEqual([]);
 
   await host.close();
   await guest.close();
+});
+
+test("soccer and baseball formations show player photos and sync defensive picks", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/`);
+  await expect(page.locator("#loading")).toBeHidden();
+  const [firstMember, secondMember] = await page.evaluate(() => {
+    document.getElementById("formationSection").style.display = "block";
+    initTeams();
+    teams[myPlayerSlot].allPicks = [allMasterData[0], allMasterData[1]];
+    return allMasterData.slice(0, 2).map(member => ({ name: member.名前, photo: member.写真 }));
+  });
+
+  await page.evaluate(() => window.switchSportTab("soccer"));
+  const soccerSelect = page.locator(".soccer-player-slot .sport-player-select").first();
+  await soccerSelect.click();
+  await soccerSelect.selectOption(firstMember.name);
+  await expect(page.locator(".soccer-player-slot .sport-player-name").first()).toHaveText(firstMember.name);
+  await expect(page.locator(".soccer-player-slot .sport-player-image").first()).toHaveAttribute("src", firstMember.photo);
+
+  await page.evaluate(() => {
+    document.getElementById("dhCheck").checked = false;
+    window.switchSportTab("baseball");
+  });
+  const battingSelect = page.locator('.baseball-lineup-row[data-order="1"] .baseball-lineup-player-select');
+  await battingSelect.click();
+  await battingSelect.selectOption(secondMember.name);
+  await page.locator("#btnBbVisual").click();
+
+  const pitcherSelect = page.locator('.baseball-player-slot[data-position="P"] .baseball-defense-select');
+  await expect(pitcherSelect).toHaveValue(secondMember.name);
+  await expect(page.locator('.baseball-player-slot[data-position="P"] .sport-player-name')).toHaveText(secondMember.name);
+  await expect(page.locator('.baseball-player-slot[data-position="P"] .sport-player-image')).toHaveAttribute("src", secondMember.photo);
+
+  await pitcherSelect.selectOption(firstMember.name);
+  await expect(battingSelect).toHaveValue(firstMember.name);
 });

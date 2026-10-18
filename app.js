@@ -191,6 +191,8 @@ function updateUIForTeamCount() {
 
 function parseCsv(text) {
   const rows = [];
+  const firstLine = text.split(/\r?\n/, 1)[0] || "";
+  const delimiter = firstLine.includes("\t") && !firstLine.includes(",") ? "\t" : ",";
   let row = [];
   let field = "";
   let inQuotes = false;
@@ -204,7 +206,7 @@ function parseCsv(text) {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === "," && !inQuotes) {
+    } else if (char === delimiter && !inQuotes) {
       row.push(field.trim());
       field = "";
     } else if ((char === "\n" || char === "\r") && !inQuotes) {
@@ -296,33 +298,23 @@ function buildBaseballVisualGround() {
     <div class="batter-box-right"></div>
   `;
 
-  const positions = [
-    { pos: "投手 (P)", x: 50, y: 62 },
-    { pos: "捕手 (C)", x: 50, y: 90 },
-    { pos: "一塁 (1B)", x: 78, y: 56 },
-    { pos: "二塁 (2B)", x: 62, y: 40 },
-    { pos: "三塁 (3B)", x: 22, y: 56 },
-    { pos: "遊撃 (SS)", x: 38, y: 40 },
-    { pos: "左翼 (LF)", x: 18, y: 24 },
-    { pos: "中堅 (CF)", x: 50, y: 14 },
-    { pos: "右翼 (RF)", x: 82, y: 24 },
-    { pos: "DH", x: 88, y: 85 }
-  ];
-
   const optionsHtml = getUserPicksOptionsHtml();
-
-  positions.forEach(c => {
+  getBaseballPositions().forEach(position => {
     const slot = document.createElement("div");
-    slot.className = "draggable-slot";
-    slot.style.left = c.x + "%";
-    slot.style.top = c.y + "%";
+    slot.className = "draggable-slot sport-player-slot baseball-player-slot";
+    slot.dataset.position = position.code;
+    slot.style.left = position.x + "%";
+    slot.style.top = position.y + "%";
     slot.innerHTML = `
-      <span style="font-size:10px; color:#ffd700; font-weight:bold; text-shadow: 1px 1px 2px #000;">${c.pos}</span>
-      <select style="font-size:10px; width:100%; background:#222; color:#fff; border:none; margin-top:2px; padding:2px;">${optionsHtml}</select>
+      <span class="sport-position-label">${position.label}</span>
+      <img class="sport-player-image" alt="" hidden>
+      <span class="sport-player-name">未配置</span>
+      <select class="sport-player-select baseball-defense-select" aria-label="${position.label}の守備選手" onchange="syncBaseballLineupFromDefense(this)">${optionsHtml}</select>
     `;
     makeDraggable(slot);
     ground.appendChild(slot);
   });
+  updateBaseballVisualPlayers();
 }
 
 function initSoloMode() {
@@ -471,10 +463,11 @@ function enterLobbyWait(amIHost) {
   document.getElementById("hostBadge").style.display = amIHost ? "inline-block" : "none";
   document.getElementById("hostControlBtns").style.display = amIHost ? "block" : "none";
 
+  let isDraftStarted = false;
   const lobbySlotsRef = db.ref(`rooms/${currentRoomId}/slots`);
   lobbySlotsRef.on('value', snap => {
     const slots = snap.val();
-    if (!slots) return;
+    if (!slots || isDraftStarted) return;
 
     const grid = document.getElementById("lobbySlotsGrid");
     grid.innerHTML = "";
@@ -508,6 +501,7 @@ function enterLobbyWait(amIHost) {
   statusRef.on('value', snap => {
     const val = snap.val();
     if (val === "started") {
+      isDraftStarted = true;
       writeLog(`🚀 ホストがドラフト会議を開始しました！`);
       lobbySlotsRef.off();
       statusRef.off();
@@ -690,9 +684,12 @@ function setupDraftGameListeners() {
       startSession(currentSession);
     }
 
-    if (event.type === "session_ranks" && !isHost) {
-      applySessionRanks(event.ranks);
-    }
+  });
+
+  db.ref(`rooms/${currentRoomId}/sessionRanks`).on('value', snap => {
+    if (isHost) return;
+    const data = snap.val();
+    if (data && data.session === currentSession) applySessionRanks(data.ranks);
   });
 
   db.ref(`rooms/${currentRoomId}/finalResults`).on('value', snap => {
@@ -876,14 +873,11 @@ function determineNextSessionRanks() {
   if (gameMode === "multi" && isHost) {
     const updates = {};
     teams.forEach(t => { updates[`slots/slot_${t.id}/rank`] = t.rank; });
-    const ranks = teams.map(t => ({ teamId: t.id, rank: t.rank }));
-    db.ref(`rooms/${currentRoomId}`).update(updates).then(() => {
-      return db.ref(`rooms/${currentRoomId}/roundEvent`).set({
-        type: "session_ranks",
-        session: currentSession,
-        ranks,
-        ts: Date.now()
-      });
+    db.ref(`rooms/${currentRoomId}`).update(updates);
+    db.ref(`rooms/${currentRoomId}/sessionRanks`).set({
+      session: currentSession,
+      ranks: teams.map(t => ({ teamId: t.id, rank: t.rank })),
+      ts: Date.now()
     });
   }
 }
@@ -2043,7 +2037,7 @@ function updateRoundBoardVisualizer(targetRound, activeLoserSlotIds = null) {
   grid.innerHTML = "";
 
   teams.forEach(t => {
-    const pick = [...t.sessionPicks].filter(p => !p.isPass).sort((a, b) => b.draftRound - a.draftRound)[0] || null;
+    const pick = t.sessionPicks.find(p => p.draftRound === targetRound && !p.isPass) || null;
     const isLoserNow = activeLoserSlotIds && activeLoserSlotIds.includes(t.id);
 
     let leftTrackHtml = "";
@@ -3023,41 +3017,120 @@ function updateStageVisualizer() {
   });
 }
 
+const BASEBALL_FIELD_POSITIONS = [
+  { code: "P", label: "投手 (P)", x: 50, y: 62 },
+  { code: "C", label: "捕手 (C)", x: 50, y: 90 },
+  { code: "1B", label: "一塁 (1B)", x: 78, y: 56 },
+  { code: "2B", label: "二塁 (2B)", x: 62, y: 40 },
+  { code: "3B", label: "三塁 (3B)", x: 22, y: 56 },
+  { code: "SS", label: "遊撃 (SS)", x: 38, y: 40 },
+  { code: "LF", label: "左翼 (LF)", x: 18, y: 24 },
+  { code: "CF", label: "中堅 (CF)", x: 50, y: 14 },
+  { code: "RF", label: "右翼 (RF)", x: 82, y: 24 }
+];
+
+function getBaseballPositions() {
+  const positions = [...BASEBALL_FIELD_POSITIONS];
+  if (document.getElementById("dhCheck")?.checked) {
+    positions.unshift({ code: "DH", label: "指名打者 (DH)", x: 88, y: 85 });
+  }
+  return positions;
+}
+
+function updateSportPlayerMarker(select) {
+  const marker = select.closest(".sport-player-slot");
+  if (!marker) return;
+
+  const option = select.selectedOptions[0];
+  const name = select.value;
+  const image = marker.querySelector(".sport-player-image");
+  const nameLabel = marker.querySelector(".sport-player-name");
+  const photoUrl = option?.dataset.photo || "";
+
+  nameLabel.textContent = name || "未配置";
+  if (photoUrl && name) {
+    image.src = photoUrl;
+    image.alt = name;
+    image.hidden = false;
+  } else {
+    image.removeAttribute("src");
+    image.alt = "";
+    image.hidden = true;
+  }
+}
+
+function updateBaseballVisualPlayers() {
+  const rows = [...document.querySelectorAll(".baseball-lineup-row")];
+  document.querySelectorAll(".baseball-player-slot").forEach(marker => {
+    const position = marker.dataset.position;
+    const lineupRow = rows.find(row => row.querySelector(".baseball-position-select").value === position);
+    const defenseSelect = marker.querySelector(".baseball-defense-select");
+    defenseSelect.value = lineupRow?.querySelector(".baseball-lineup-player-select").value || "";
+    updateSportPlayerMarker(defenseSelect);
+  });
+}
+
+function syncBaseballLineupFromDefense(select) {
+  const marker = select.closest(".baseball-player-slot");
+  const lineupRow = [...document.querySelectorAll(".baseball-lineup-row")]
+    .find(row => row.querySelector(".baseball-position-select").value === marker?.dataset.position);
+  if (lineupRow) {
+    lineupRow.querySelector(".baseball-lineup-player-select").value = select.value;
+  }
+  updateSportPlayerMarker(select);
+}
+
 function buildBaseballField() {
   const container = document.getElementById("baseballTableContainer");
   if (!container) return;
-  
-  const useDH = document.getElementById("dhCheck").checked;
-  const positions = useDH ? ["投", "捕", "一", "二", "三", "遊", "左", "中", "右", "DH"] : ["投", "捕", "一", "二", "三", "遊", "左", "中", "右"];
-  const optionsHtml = getUserPicksOptionsHtml();
-  
-  let html = `<table style="width:100%; border-collapse:collapse; background:rgba(0,0,0,0.4);">
-    <tr style="background:#111; color:#ffd700;">
-      <th style="padding:10px; border:1px solid #444; width:15%;">打順</th>
-      <th style="padding:10px; border:1px solid #444; width:25%;">守備位置</th>
-      <th style="padding:10px; border:1px solid #444; width:60%;">選手名</th>
-    </tr>`;
 
-  for (let i = 1; i <= 9; i++) {
-    html += `<tr>
-      <td style="padding:8px; border:1px solid #444; text-align:center; font-weight:bold; font-size:16px;">${i}番</td>
-      <td style="padding:8px; border:1px solid #444; text-align:center;">
-        <select style="width:100%; padding:6px; font-weight:bold;">
-          ${positions.map((p, idx) => `<option ${idx === i-1 ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
-      </td>
-      <td style="padding:8px; border:1px solid #444;">
-        <select style="width:100%; padding:6px;">${optionsHtml}</select>
-      </td>
-    </tr>`;
-  }
-  html += `</table>`;
-  container.innerHTML = html;
+  const savedRows = [...container.querySelectorAll(".baseball-lineup-row")].map(row => ({
+    position: row.querySelector(".baseball-position-select").value,
+    player: row.querySelector(".baseball-lineup-player-select").value
+  }));
+  const useDH = document.getElementById("dhCheck").checked;
+  const positionCodes = useDH ? ["DH", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"] : ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"];
+  const optionsHtml = getUserPicksOptionsHtml();
+
+  const positionOptions = positionCodes.map((code, index) => {
+    const position = code === "DH" ? { code, label: "指名打者 (DH)" } : BASEBALL_FIELD_POSITIONS.find(item => item.code === code);
+    return `<option value="${code}">${position.label}</option>`;
+  }).join("");
+
+  container.innerHTML = `<table class="baseball-lineup-table">
+    <thead><tr><th>打順</th><th>守備位置</th><th>選手名</th></tr></thead>
+    <tbody>${Array.from({ length: 9 }, (_, index) => {
+      const defaultCode = positionCodes[index];
+      const saved = savedRows[index];
+      const selectedPosition = positionCodes.includes(saved?.position) ? saved.position : defaultCode;
+      const playerOptions = optionsHtml.replace(
+        '<option value="">-- 未配置 --</option>',
+        `<option value="" ${saved?.player ? "" : "selected"}>-- 未配置 --</option>`
+      ).replace(`value="${saved?.player || "__no_match__"}"`, `value="${saved?.player || "__no_match__"}" selected`);
+      return `<tr class="baseball-lineup-row" data-order="${index + 1}">
+        <td>${index + 1}番</td>
+        <td><select class="baseball-position-select" aria-label="${index + 1}番の守備位置" onchange="updateBaseballVisualPlayers()">${positionOptions.replace(`value="${selectedPosition}"`, `value="${selectedPosition}" selected`)}</select></td>
+        <td><select class="baseball-lineup-player-select" aria-label="${index + 1}番の選手" onchange="updateBaseballVisualPlayers()">${playerOptions}</select></td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table>`;
+
+  container.querySelectorAll(".baseball-lineup-player-select").forEach((select, index) => {
+    if (savedRows[index]?.player) select.value = savedRows[index].player;
+  });
+  container.querySelectorAll(".baseball-position-select").forEach((select, index) => {
+    select.value = positionCodes.includes(savedRows[index]?.position) ? savedRows[index].position : positionCodes[index];
+  });
+  updateBaseballVisualPlayers();
 }
 
 function applySoccerTemplate() {
   const pitch = document.getElementById("soccerPitch");
   if (!pitch) return;
+  const savedPlayers = new Map([...pitch.querySelectorAll(".soccer-player-slot")].map(slot => [
+    slot.dataset.position,
+    slot.querySelector(".sport-player-select")?.value || ""
+  ]));
   pitch.innerHTML = "";
 
   const templateType = document.getElementById("soccerTemplate").value;
@@ -3094,15 +3167,21 @@ function applySoccerTemplate() {
 
   coords.forEach((c) => {
     const slot = document.createElement("div");
-    slot.className = "draggable-slot";
+    slot.className = "draggable-slot sport-player-slot soccer-player-slot";
+    slot.dataset.position = c.pos;
     slot.style.left = c.x + "%";
     slot.style.top = c.y + "%";
     slot.innerHTML = `
-      <span style="font-size:10px; color:#ffd700; font-weight:bold;">${c.pos}</span>
-      <select style="font-size:10px; width:100%; background:#222; color:#fff; border:none; margin-top:2px; padding:2px;">${optionsHtml}</select>
+      <span class="sport-position-label">${c.pos}</span>
+      <img class="sport-player-image" alt="" hidden>
+      <span class="sport-player-name">未配置</span>
+      <select class="sport-player-select" aria-label="${c.pos}の選手" onchange="updateSportPlayerMarker(this)">${optionsHtml}</select>
     `;
+    const select = slot.querySelector(".sport-player-select");
+    select.value = savedPlayers.get(c.pos) || "";
     makeDraggable(slot);
     pitch.appendChild(slot);
+    updateSportPlayerMarker(select);
   });
 }
 
@@ -3111,6 +3190,7 @@ function makeDraggable(elm) {
   elm.onpointerdown = dragMouseDown;
 
   function dragMouseDown(e) {
+    if (e.target.closest("select, option, button, input")) return;
     e.preventDefault();
     mouseX = e.clientX;
     mouseY = e.clientY;

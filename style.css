@@ -176,6 +176,19 @@
     transform: scale(1.08);
     z-index: 20;
   }
+  .sport-player-slot { width: 112px; min-height: 114px; gap: 3px; padding: 5px; box-sizing: border-box; }
+  .sport-position-label { color: #ffd700; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+  .sport-player-image { width: 42px; height: 42px; border: 2px solid #fff; border-radius: 50%; object-fit: cover; background: #455a64; pointer-events: none; }
+  .sport-player-image[hidden] { display: none; }
+  .sport-player-name { width: 100%; color: #fff; font-size: 10px; font-weight: bold; line-height: 1.2; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+  .draggable-slot .sport-player-select { position: relative; z-index: 2; width: 100%; max-width: 100%; min-width: 0; padding: 4px 2px; margin-top: 2px; color: #fff; background: #222; border: 1px solid #78909c; font-size: 10px; cursor: pointer; touch-action: manipulation; user-select: auto; }
+  .baseball-lineup-table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.4); color: #fff; }
+  .baseball-lineup-table th { padding: 10px; border: 1px solid #444; color: #ffd700; background: #111; }
+  .baseball-lineup-table td { padding: 8px; border: 1px solid #444; }
+  .baseball-lineup-table td:first-child { text-align: center; font-weight: bold; font-size: 16px; }
+  .baseball-lineup-table select { width: 100%; min-width: 0; padding: 7px; }
+  .baseball-ground .sport-player-slot { width: 112px !important; }
+  .soccer-pitch .sport-player-slot { width: 112px; }
 
   /* 野球グラウンド（潰れない高さを確保） */
   #baseballCaptureArea {
