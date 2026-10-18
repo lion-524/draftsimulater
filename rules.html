@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>坂道グループ 疑似ドラフト会議 - 公式ルール解説</title>
+<style>
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #eceff1;
+    margin: 0;
+    padding: 30px 20px;
+    color: #263238;
+    line-height: 1.8;
+  }
+  .rule-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 35px 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #5e35b1;
+    border-bottom: 3px solid #5e35b1;
+    padding-bottom: 12px;
+    margin-top: 0;
+    font-size: 24px;
+  }
+  h2 {
+    color: #d81b60;
+    margin: 25px 0 10px 0;
+    font-size: 18px;
+    border-left: 5px solid #d81b60;
+    padding-left: 10px;
+  }
+  ul {
+    margin: 8px 0 16px 20px;
+    padding: 0;
+  }
+  li {
+    margin-bottom: 8px;
+  }
+  .rule-tag {
+    display: inline-block;
+    background: #ede7f6;
+    color: #4527a0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 13px;
+    margin-right: 6px;
+  }
+  .notice-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 12px 16px;
+    margin: 15px 0;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .footer-btn {
+    text-align: center;
+    margin-top: 30px;
+    border-top: 1px solid #cfd8dc;
+    padding-top: 20px;
+  }
+  button {
+    background: #5e35b1;
+    color: #fff;
+    border: none;
+    padding: 12px 36px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover {
+    background: #4527a0;
+  }
+</style>
+</head>
+<body>
+
+<div class="rule-container">
+  <h1>📖 坂道グループ 疑似ドラフト会議 公式ルール解説</h1>
+  
+  <h2>1. 会議の基本構成</h2>
+  <ul>
+    <li><span class="rule-tag">開催周数</span>ドラフト会議は <b>全 7 周（7セッション）</b> にわたって行われます。</li>
+    <li><span class="rule-tag">参加球団数</span><b>5球団〜10球団</b>（開始時に設定可能）による同時対戦です。</li>
+    <li><span class="rule-tag">候補者リスト</span>各周ごとにスプレッドシートから新たな候補者プール（第1周〜第7周）が自動的に読み込まれます。</li>
+  </ul>
+
+  <h2>2. 指名方式のルール</h2>
+  <ul>
+    <li><b>通常ウェーバー制:</b>
+      <ul>
+        <li><b>第1巡目</b>：全球団が同時に獲得希望選手を1名入札。単独指名は即確定。重複（競合）が発生した場合は <b>リアルタイムくじ引き抽選</b> を実施。外れた球団のみで「外れ1位（外れ外れ1位...）」の再入札を単独確定するまでループします。</li>
+        <li><b>第2巡目以降</b>：<b>偶数巡目は最下位（N位）➔ 1位</b>、<b>奇数巡目は上位（1位）➔ N位</b> の順で指名（逆ウェーバー方式）。折り返しとなる1位や最下位のチームは <b>連続して2名</b> 指名します。</li>
+      </ul>
+    </li>
+    <li><b>全巡抽選制:</b>
+      <ul>
+        <li>第1巡目だけでなく、<b>2巡目以降の全巡で全球団が一斉入札</b> を行います。重複した場合はその都度くじ引き抽選と外れ再入札が行われます。</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>3. 翌年度（次周）の順位決定ルール</h2>
+  <ul>
+    <li><span class="rule-tag">ウェーバー順位</span>前周で獲得した選手の <b>「合計ポイント」が高いチームほど上位（1位）</b> 扱いになります。</li>
+    <li><b>合計ポイントが最も低かったチームが最下位（8位など）</b> となり、次周の2巡目指名権を <b>最優先（1番手）</b> で獲得できます（戦力均衡リバースウェーバー）。</li>
+  </ul>
+  <div class="notice-box">
+    ⚠️【重要】選手の「指名ポイント」の数値は、戦略の駆け引きを保つため全7周が完全に終了するまで画面や実況ログには一切開示されません（完全秘匿）。
+  </div>
+
+  <h2>4. CPUの指名戦略</h2>
+  <ul>
+    <li>参加球団のうち <b>2球団は「高卒・大卒」のポイント上位者を優先して狙う育成方針</b> をとります。</li>
+    <li>残りの球団は、出身区分に関係なく <b>残っている候補者の中で最もポイントの高い選手を重点的に狙う即戦力方針</b> をとります。</li>
+    <li>最高ポイントの候補が同点で複数いる場合は、競合率や確率判定により自然に分散します。</li>
+  </ul>
+
+  <h2>5. 全巡終了とステージ編成ルーム</h2>
+  <ul>
+    <li>各巡が終了するごとに全球団の指名結果を確認し、<b>参加者全員が確認完了ボタンを押すと次の巡へ進みます</b>。</li>
+    <li>全7周終了後、全選手のポイントと各球団の累計総合順位・トップ10選手が発表されます。獲得メンバーで選抜フォーメーション（16〜20人選抜、単独/Wセンター）を組み、<b>PNG画像として書き出し保存</b> できます。</li>
+  </ul>
+
+  <div class="footer-btn">
+    <button onclick="window.close()">このタブを閉じる</button>
+  </div>
+</div>
+
+</body>
+</html>

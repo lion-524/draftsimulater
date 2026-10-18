@@ -1,0 +1,273 @@
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #eceff1; margin: 0; padding: 20px; color: #263238; }
+  .container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
+  
+  .header-area { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5e35b1; padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  h1 { margin: 0; color: #5e35b1; font-size: 24px; }
+  .header-btns { display: flex; gap: 8px; align-items: center; }
+  
+  .mode-select-box { background: #ede7f6; border: 2px dashed #7e57c2; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px; }
+  .mode-select-btns { display: flex; gap: 15px; justify-content: center; margin-top: 15px; flex-wrap: wrap; }
+  .btn-mode { padding: 14px 28px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; color: #fff; }
+  .btn-solo { background: #5e35b1; }
+  .btn-solo:hover { background: #4527a0; }
+  .btn-multi { background: #00897b; }
+  .btn-multi:hover { background: #00695c; }
+  .btn-rule-help { background: #3949ab; font-size: 13px; padding: 8px 14px; border-radius: 4px; border: none; color: #fff; cursor: pointer; font-weight: bold; }
+  .btn-rule-help:hover { background: #283593; }
+  
+  .lobby-card { background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: none; }
+  .lobby-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 15px 0; }
+  .lobby-slot { background: #fff; border: 1px solid #cfd8dc; border-radius: 6px; padding: 10px; text-align: center; }
+  .lobby-slot.occupied { border-color: #00897b; background: #e0f2f1; font-weight: bold; }
+  
+  .session-bar { display: flex; justify-content: space-between; background: #ede7f6; border: 2px solid #b39ddb; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; flex-wrap: wrap; gap: 8px; }
+  .panel { background: #f8f9fa; border: 1px solid #cfd8dc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+  
+  .grid-teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .team-card { background: #fff; border-top: 4px solid #5e35b1; border-radius: 6px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .team-card.user { border-top-color: #e91e63; }
+  .team-card.finished { opacity: 0.75; background: #f5f5f5; border-top-color: #9e9e9e !important; }
+  .team-title { font-weight: bold; font-size: 15px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  
+  .log-terminal { height: 170px; background: #212121; color: #69f0ae; font-family: 'Courier New', monospace; padding: 12px; border-radius: 6px; overflow-y: scroll; font-size: 13px; line-height: 1.6; }
+  
+  .controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  select { padding: 9px; border: 1px solid #b0bec5; border-radius: 4px; font-size: 14px; background: #fff; }
+  #playerDropdown { flex: 1; min-width: 280px; }
+  
+  .user-pick-status-banner {
+    display: none; background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 8px;
+    padding: 14px 18px; margin: 12px 0; color: #1b5e20; font-size: 14px; font-weight: bold;
+    align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    box-shadow: 0 2px 6px rgba(46,125,50,0.15);
+  }
+  .user-pick-status-banner.is-miss { background: #ffebee; border-color: #d32f2f; color: #c62828; }
+  .user-pick-status-banner.is-pass { background: #eceff1; border-color: #78909c; color: #37474f; }
+  .user-pick-name { font-size: 20px; color: #2e7d32; margin-left: 8px; font-weight: 900; }
+  .user-pick-status-banner.is-miss .user-pick-name { color: #d32f2f; }
+  .user-pick-status-banner.is-pass .user-pick-name { color: #455a64; }
+  
+  button { background: #5e35b1; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+  button:hover { background: #4527a0; }
+  button:disabled { background: #b0bec5; cursor: not-allowed; }
+  
+  .btn-reset { background: #d32f2f; padding: 8px 16px; font-size: 12px; }
+  .btn-reset:hover { background: #b71c1c; }
+  .btn-pass { background: #78909c; }
+  .btn-pass:hover { background: #546e7a; }
+  .btn-next { background: #00897b; }
+  .btn-next:hover { background: #00695c; }
+  .btn-ready { background: #e65100; font-size: 15px; padding: 12px 24px; box-shadow: 0 4px 12px rgba(230, 81, 0, 0.35); }
+  .btn-ready:hover { background: #bf360c; }
+  .btn-formation { background: #e91e63; font-size: 16px; padding: 12px 28px; box-shadow: 0 4px 10px rgba(233,30,99,0.3); }
+  .btn-formation:hover { background: #c2185b; }
+  .btn-download-img { background: #0288d1; font-size: 14px; padding: 10px 20px; border-radius: 6px; }
+  .btn-download-img:hover { background: #0277bd; }
+  .btn-release-room { background: #37474f; font-size: 14px; padding: 10px 20px; border-radius: 6px; }
+  .btn-release-room:hover { background: #263238; }
+  
+  .badge { font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-left: 6px; display: inline-block; }
+  .badge-高卒 { background: #ffe082; color: #b78103; border: 1px solid #fbc02d; }
+  .badge-大卒 { background: #b3e5fc; color: #0277bd; border: 1px solid #81d4fa; }
+  .badge-社会人 { background: #c8e6c9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .badge-独L { background: #e1bee7; color: #6a1b9a; border: 1px solid #ce93d8; }
+  
+  .policy-tag { font-size: 10px; padding: 2px 5px; border-radius: 3px; background: #ede7f6; color: #5e35b1; font-weight: bold; margin-left: 4px; }
+  .session-group { margin-bottom: 8px; border-bottom: 1px dashed #cfd8dc; padding-bottom: 6px; }
+  .round-pick-row { font-size: 13px; margin-top: 4px; color: #263238; display: flex; align-items: center; flex-wrap: wrap; }
+  .round-num-label { font-weight: bold; color: #5e35b1; min-width: 55px; }
+
+  #loading { font-weight: bold; color: #5e35b1; }
+  .rank-badge { font-size: 11px; background: #37474f; color: #fff; padding: 2px 5px; border-radius: 3px; }
+  .session-info-tag { font-size: 11px; font-weight: bold; color: #5e35b1; background: #ede7f6; padding: 1px 5px; border-radius: 3px; margin-left: 5px; }
+
+  .round-board-panel { background: #ffffff; border: 3px solid #1a237e; border-radius: 8px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.12); display: block !important; }
+  .round-board-header { background: #1a237e; color: #ffd700; padding: 12px 18px; font-size: 16px; font-weight: 900; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1.5px; border-bottom: 2px solid #ffd700; }
+  .npb-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: #90a4ae; min-height: 120px; }
+  @media (max-width: 768px) { .npb-grid { grid-template-columns: 1fr; } }
+  .npb-cell { background: #ffffff; display: flex; flex-direction: column; position: relative; transition: all 0.3s ease; }
+  .npb-cell.is-active-turn { outline: 3px solid #ffd700; outline-offset: -3px; background: #fffde7 !important; z-index: 5; }
+  .npb-cell.opening-now { animation: flipCard 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  @keyframes flipCard { 0% { transform: scaleY(0.1); opacity: 0.3; background: #fffde7; } 100% { transform: scaleY(1); opacity: 1; background: #ffffff; } }
+  .npb-cell.is-conflict { background: #fff3e0 !important; border: 2px solid #ff9800; z-index: 2; }
+  .npb-cell.is-conflict .conflict-banner { display: inline-block; background: #e65100; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 3px; letter-spacing: 1px; animation: flashConflict 1s infinite alternate; }
+  @keyframes flashConflict { from { opacity: 0.8; } to { opacity: 1; transform: scale(1.05); } }
+  .npb-cell.is-confirmed-cell { background: #f1f8e9 !important; border: 2px solid #4caf50; }
+
+  .npb-cell-header { background: #eceff1; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; border-bottom: 2px solid #37474f; }
+  .npb-cell-header.is-user { background: #fce4ec; border-bottom-color: #d81b60; color: #880e4f; }
+  .npb-cell-body { padding: 10px 14px; display: flex; align-items: center; min-height: 72px; }
+  .lottery-track { display: flex; align-items: center; gap: 4px; margin-right: 12px; font-size: 11px; font-weight: bold; }
+  .stamp-red { border: 1.5px solid #d32f2f; color: #d32f2f; font-size: 10px; padding: 1px 2px; border-radius: 2px; font-weight: 900; line-height: 1; }
+  .stamp-green { border: 1.5px solid #2e7d32; color: #2e7d32; font-size: 10px; padding: 1px 2px; border-radius: 2px; font-weight: 900; line-height: 1; }
+  .player-name-main { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #111; line-height: 1.1; }
+  .player-meta-sub { font-size: 12px; color: #455a64; margin-top: 4px; display: flex; gap: 10px; font-weight: 600; }
+  .card-closed { width: 100%; text-align: center; color: #90a4ae; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+  .pass-state { width: 100%; text-align: center; color: #78909c; font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 999; justify-content: center; align-items: center; }
+  .lottery-modal { background: #fff; width: 92%; max-width: 650px; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.3s ease; }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .lottery-title { font-size: 20px; font-weight: bold; color: #d81b60; margin-bottom: 8px; }
+  .lottery-guide { font-size: 14px; font-weight: bold; color: #5e35b1; margin-bottom: 12px; }
+  .bidding-members-list { background: #fce4ec; border: 1px dashed #f06292; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; color: #880e4f; font-size: 13px; line-height: 1.5; }
+  .lottery-order-list { font-size: 12px; color: #37474f; margin-top: 5px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #f8bbd0; }
+  
+  .envelope-box { display: flex; justify-content: center; gap: 14px; margin: 25px 0; min-height: 130px; flex-wrap: wrap; }
+  .envelope-wrapper { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 75px; }
+  .envelope-holder-tag { font-size: 10px; font-weight: bold; padding: 2px 4px; border-radius: 3px; min-height: 16px; text-align: center; word-break: break-all; }
+  .tag-taken { background: #455a64; color: #fff; }
+  .tag-user { background: #e91e63; color: #fff; }
+  .tag-vacant { background: #e0e0e0; color: #757575; }
+
+  .envelope { width: 70px; height: 95px; background: #ffecb3; border: 2px solid #ffb300; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; cursor: not-allowed; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); user-select: none; opacity: 0.6; }
+  .envelope.selectable { cursor: pointer; opacity: 1; border-color: #ff8f00; background: #fff8e1; animation: selectablePulse 1.2s infinite alternate; }
+  @keyframes selectablePulse { from { transform: translateY(0); box-shadow: 0 4px 8px rgba(255,143,0,0.3); } to { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(255,143,0,0.6); } }
+  .envelope.is-chosen { opacity: 1; border-color: #78909c; background: #cfd8dc; }
+  .envelope.selected-user { border: 3px solid #e91e63 !important; background: #f8bbd0 !important; opacity: 1 !important; transform: scale(1.05); }
+  .envelope.winner { background: #ffd700 !important; border-color: #ff6f00 !important; transform: scale(1.15) !important; box-shadow: 0 8px 20px rgba(255, 111, 0, 0.6) !important; opacity: 1 !important; }
+  .envelope.loser { background: #e0e0e0 !important; border-color: #9e9e9e !important; opacity: 0.5 !important; }
+  .stamp-result { display: none; font-size: 19px; font-weight: bold; color: #d32f2f; border: 3px solid #d32f2f; padding: 8px 16px; border-radius: 8px; margin-top: 15px; letter-spacing: 2px; }
+
+  /* 総合フォーメーション関連スタイル */
+  #formationSection { display: none; margin-top: 30px; border-top: 3px solid #e91e63; padding-top: 20px; }
+  .formation-card { background: #fafafa; border: 1px solid #cfd8dc; border-radius: 8px; padding: 20px; }
+  .pos-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pos-label { width: 160px; font-weight: bold; font-size: 13px; }
+  .formation-select { flex: 1; max-width: 340px; }
+  
+  /* サッカーピッチ */
+  .soccer-pitch {
+    background: #2e7d32;
+    border: 3px solid #fff;
+    height: 620px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .soccer-pitch::before {
+    content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.6);
+  }
+  .soccer-pitch::after {
+    content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
+  }
+
+  /* ドラッグスロット共通 */
+  .draggable-slot {
+    position: absolute;
+    width: 80px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 2px solid #ffd700;
+    border-radius: 8px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    z-index: 10;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+  .draggable-slot:active {
+    cursor: grabbing;
+    transform: scale(1.08);
+    z-index: 20;
+  }
+
+  /* 野球グラウンド（潰れない高さを確保） */
+  #baseballCaptureArea {
+    background: #1b5e20 !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    color: #fff !important;
+    min-height: 650px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  #baseballVisualContainer {
+    flex: 1 !important;
+    position: relative !important;
+    min-height: 550px !important;
+  }
+  .baseball-ground {
+    background: #1b5e20 !important;
+    border: 3px solid #fff !important;
+    width: 100% !important;
+    height: 550px !important;
+    min-height: 550px !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5) !important;
+  }
+  .ballpark-stand {
+    position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 45px !important;
+    background: linear-gradient(180deg, #37474f 0%, #263238 100%) !important; border-bottom: 4px solid #b71c1c !important;
+    display: flex !important; align-items: center !important; justify-content: center !important; color: #ffd700 !important;
+    font-weight: bold !important; font-size: 13px !important; letter-spacing: 2px !important; z-index: 1 !important;
+  }
+  .infield-dirt {
+    position: absolute !important; bottom: 45px !important; left: 50% !important; transform: translateX(-50%) rotate(45deg) !important;
+    width: 180px !important; height: 180px !important; background: #8d6e63 !important; border: 2px solid rgba(255,255,255,0.3) !important; z-index: 1 !important;
+  }
+  .infield-grass {
+    position: absolute !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important;
+    width: 120px !important; height: 120px !important; background: #2e7d32 !important; z-index: 2 !important;
+  }
+  .foul-line-left {
+    position: absolute !important; bottom: 60px !important; left: 50% !important; width: 2px !important; height: 420px !important;
+    background: rgba(255,255,255,0.8) !important; transform-origin: bottom center !important; transform: translateX(-50%) rotate(-45deg) !important; z-index: 2 !important;
+  }
+  .foul-line-right {
+    position: absolute !important; bottom: 60px !important; left: 50% !important; width: 2px !important; height: 420px !important;
+    background: rgba(255,255,255,0.8) !important; transform-origin: bottom center !important; transform: translateX(-50%) rotate(45deg) !important; z-index: 2 !important;
+  }
+  .baseball-base {
+    position: absolute !important; width: 14px !important; height: 14px !important; background: #fff !important;
+    transform: translate(-50%, -50%) rotate(45deg) !important; z-index: 3 !important;
+  }
+  .home-base {
+    position: absolute !important; bottom: 50px !important; left: 50% !important; width: 14px !important; height: 14px !important;
+    background: #fff !important; transform: translateX(-50%) !important; z-index: 3 !important;
+    clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%) !important;
+  }
+  .batter-box-left {
+    position: absolute !important; bottom: 45px !important; left: calc(50% - 18px) !important; width: 10px !important; height: 20px !important;
+    border: 1px dashed rgba(255,255,255,0.6) !important; transform: translateX(-50%) !important; z-index: 2 !important;
+  }
+  .batter-box-right {
+    position: absolute !important; bottom: 45px !important; left: calc(50% + 18px) !important; width: 10px !important; height: 20px !important;
+    border: 1px dashed rgba(255,255,255,0.6) !important; transform: translateX(-50%) !important; z-index: 2 !important;
+  }
+  .baseball-ground .draggable-slot {
+    position: absolute !important; transform: translate(-50%, -50%) !important; width: 80px !important; z-index: 10 !important;
+  }
+
+  /* アイドルステージ */
+  .stage-visualizer { background: linear-gradient(180deg, #263238 0%, #1a237e 100%); border-radius: 12px; padding: 25px 15px; margin-top: 25px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); text-align: center; color: #fff; }
+  .stage-front-edge { border-bottom: 3px solid #e91e63; width: 60%; margin: 15px auto 0 auto; font-size: 11px; letter-spacing: 2px; color: #f48fb1; padding-bottom: 5px; }
+  .stage-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .member-slot { width: 85px; display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 4px; }
+  .member-slot.is-center { background: rgba(233, 30, 99, 0.25); border-color: #ff4081; transform: scale(1.08); box-shadow: 0 0 12px rgba(255, 64, 129, 0.5); }
+  .member-avatar { width: 45px; height: 45px; border-radius: 50%; background: #455a64; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 6px; overflow: hidden; }
+  .member-slot.is-center .member-avatar { border-color: #ffd700; }
+  .member-slot-name { font-size: 11px; font-weight: bold; line-height: 1.2; word-break: break-all; min-height: 26px; display: flex; align-items: center; justify-content: center; }
+
+  /* ランキング・最終結果テーブル */
+  .final-standing-box { padding: 15px; background: #fff; }
+  .final-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+  .final-table th, .final-table td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #cfd8dc; }
+  .final-table th { background: #ede7f6; color: #4527a0; font-weight: bold; }
+  .final-table tr.user-row { background: #fce4ec; font-weight: bold; }
+  .final-tabs { display: flex; gap: 10px; margin-bottom: 12px; border-bottom: 2px solid #5e35b1; padding-bottom: 5px; }
+  .final-tab-btn { background: #ede7f6; color: #5e35b1; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  .final-tab-btn.active { background: #5e35b1; color: #fff; }
+#roundBoardPanel:not(.is-active-board) {
+  display: none !important;
+}
