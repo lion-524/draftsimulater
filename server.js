@@ -13,15 +13,21 @@ const publicFiles = new Map([
   ["rules.html", "rules.html"],
   ["style.css", "style.css"],
   ["app.js", "app.js"],
-  ["members.csv", "坂道ドラフト - シート1.csv"],
-  ["html2canvas.min.js", "node_modules/html2canvas/dist/html2canvas.min.js"]
+  ["坂道ドラフト - シート1.csv", csvPath],
+  ["html2canvas.min.js", path.join(rootDir, "node_modules/html2canvas/dist/html2canvas.min.js")]
 ]);
 
 app.get(/\/$/, (req, res) => res.sendFile(path.join(rootDir, "index.html")));
-app.get(/\/(index\.html|rules\.html|style\.css|app\.js|members\.csv|html2canvas\.min\.js)$/, (req, res) => {
-  const filename = publicFiles.get(path.basename(req.path));
+app.get(/\/[^/]+$/, (req, res) => {
+  let requestedName;
+  try {
+    requestedName = decodeURIComponent(path.basename(req.path));
+  } catch {
+    return res.sendStatus(404);
+  }
+  const filename = publicFiles.get(requestedName);
   if (!filename) return res.sendStatus(404);
-  res.sendFile(path.join(rootDir, filename));
+  res.sendFile(path.isAbsolute(filename) ? filename : path.join(rootDir, filename));
 });
 
 app.listen(port, () => {
