@@ -9,7 +9,8 @@
     "test:multi": "firebase emulators:exec --project demo-draftsimulater --only database \"playwright test\""
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

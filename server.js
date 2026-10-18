@@ -9,17 +9,20 @@ const csvPath = process.env.DRAFT_CSV_PATH || path.join(rootDir, "坂道ドラ�
 
 app.disable("x-powered-by");
 const publicFiles = new Map([
-  ["/", "index.html"],
-  ["/index.html", "index.html"],
-  ["/rules.html", "rules.html"],
-  ["/style.css", "style.css"],
-  ["/app.js", "app.js"],
-  ["/members.csv", "坂道ドラフト - シート1.csv"]
+  ["index.html", "index.html"],
+  ["rules.html", "rules.html"],
+  ["style.css", "style.css"],
+  ["app.js", "app.js"],
+  ["members.csv", "坂道ドラフト - シート1.csv"],
+  ["html2canvas.min.js", "node_modules/html2canvas/dist/html2canvas.min.js"]
 ]);
 
-for (const [route, filename] of publicFiles) {
-  app.get(route, (req, res) => res.sendFile(path.join(rootDir, filename)));
-}
+app.get(/\/$/, (req, res) => res.sendFile(path.join(rootDir, "index.html")));
+app.get(/\/(index\.html|rules\.html|style\.css|app\.js|members\.csv|html2canvas\.min\.js)$/, (req, res) => {
+  const filename = publicFiles.get(path.basename(req.path));
+  if (!filename) return res.sendStatus(404);
+  res.sendFile(path.join(rootDir, filename));
+});
 
 app.listen(port, () => {
   console.log(`Draftsimulater listening at http://localhost:${port}`);

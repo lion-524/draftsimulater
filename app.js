@@ -241,7 +241,7 @@ function parseDraftMembers(csvText) {
 window.onload = async function() {
   const loadingEl = document.getElementById("loading");
   try {
-    const response = await fetch("/members.csv");
+    const response = await fetch(new URL("members.csv", document.baseURI));
     if (!response.ok) throw new Error(`CSV読込に失敗しました (${response.status})`);
     allMasterData = parseDraftMembers(await response.text());
     if (allMasterData.length === 0) {
