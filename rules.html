@@ -82,6 +82,18 @@
     background: #4527a0;
   }
 </style>
+<script>
+  function returnToApp() {
+    if (typeof google !== "undefined" && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(function(url) {
+        if (url) window.location.href = url;
+        else alert("WebアプリのURLが取得できませんでした。");
+      }).getAppUrl();
+    } else {
+      window.location.href = "./";
+    }
+  }
+</script>
 </head>
 <body>
 
@@ -112,8 +124,8 @@
 
   <h2>3. 翌年度（次周）の順位決定ルール</h2>
   <ul>
-    <li><span class="rule-tag">ウェーバー順位</span>前周で獲得した選手の <b>「合計ポイント」が高いチームほど上位（1位）</b> 扱いになります。</li>
-    <li><b>合計ポイントが最も低かったチームが最下位（8位など）</b> となり、次周の2巡目指名権を <b>最優先（1番手）</b> で獲得できます（戦力均衡リバースウェーバー）。</li>
+    <li><span class="rule-tag">ウェーバー順位</span>それまでに獲得した選手の <b>「累計ポイント」が高いチームほど上位（1位）</b> 扱いになります。</li>
+    <li><b>累計ポイントが最も低いチームが最下位（8位など）</b> となり、次周の2巡目指名権を <b>最優先（1番手）</b> で獲得できます（戦力均衡リバースウェーバー）。</li>
   </ul>
   <div class="notice-box">
     ⚠️【重要】選手の「指名ポイント」の数値は、戦略の駆け引きを保つため全7周が完全に終了するまで画面や実況ログには一切開示されません（完全秘匿）。
@@ -129,11 +141,11 @@
   <h2>5. 全巡終了とステージ編成ルーム</h2>
   <ul>
     <li>各巡が終了するごとに全球団の指名結果を確認し、<b>参加者全員が確認完了ボタンを押すと次の巡へ進みます</b>。</li>
-    <li>全7周終了後、全選手のポイントと各球団の累計総合順位・トップ10選手が発表されます。獲得メンバーで選抜フォーメーション（16〜20人選抜、単独/Wセンター）を組み、<b>PNG画像として書き出し保存</b> できます。</li>
+    <li>全7周終了後、全選手のポイントと各球団の累計総合順位が発表されます。獲得メンバーで選抜フォーメーション（16〜20人選抜、単独/Wセンター）を組み、<b>PNG画像として書き出し保存</b> できます。</li>
   </ul>
 
   <div class="footer-btn">
-    <button onclick="window.close()">このタブを閉じる</button>
+    <button onclick="returnToApp()">アプリに戻る</button>
   </div>
 </div>
 

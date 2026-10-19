@@ -137,11 +137,11 @@ function normalizeOrigin(val) {
 function openRuleTab() {
   if (typeof google !== "undefined" && google.script && google.script.run) {
     google.script.run.withSuccessHandler(function(url) {
-      if (url) window.open(url + '?page=rules', '_blank');
+      if (url) window.location.href = url + '?page=rules';
       else alert("WebアプリのURLが取得できませんでした。");
     }).getAppUrl();
   } else {
-    window.open("rules.html", "_blank", "noopener");
+    window.location.href = "rules.html";
   }
 }
 
@@ -701,15 +701,13 @@ function setupDraftGameListeners() {
       totalPt: item.totalPt,
       picksCount: item.picksCount
     }));
-    globalTopPlayers = fData.topPlayers;
-
     isDraftCompleted = true;
     document.getElementById("roundDisplay").innerText = "全 7 周 ドラフト会議 完全終了";
     document.getElementById("teamsHeading").innerText = `【最終結果】各球団の週別獲得選手・累計総pt一覧 (全${maxTeams}球団)`;
     document.getElementById("actionControls").style.display = "none";
     document.getElementById("goToFormationBtn").style.display = "inline-block";
 
-    showFinalTab("team");
+    showFinalTab();
     renderTeams();
   });
 
@@ -857,7 +855,7 @@ function determineNextSessionRanks() {
 
   let rankingList = teams.map(t => ({
     team: t,
-    point: t.sessionPicks.filter(p => !p.isPass).reduce((sum, p) => sum + Number(p.ポイント || 0), 0),
+    point: t.allPicks.filter(p => !p.isPass).reduce((sum, p) => sum + Number(p.ポイント || 0), 0),
     tiebreaker: Math.random()
   }));
 
@@ -2196,8 +2194,6 @@ function endCurrentSession() {
 }
 
 let globalStandings = [];
-let globalTopPlayers = [];
-
 function announceFinalStandings() {
   globalStandings = teams.map(t => ({
     team: t,
@@ -2207,16 +2203,6 @@ function announceFinalStandings() {
   }));
 
   globalStandings.sort((a, b) => (b.totalPt !== a.totalPt) ? (b.totalPt - a.totalPt) : (a.picksCount !== b.picksCount ? b.picksCount - a.picksCount : a.tiebreaker - b.tiebreaker));
-
-  let allPickedPlayers = [];
-  teams.forEach(t => {
-    t.allPicks.filter(p => !p.isPass).forEach(p => {
-      allPickedPlayers.push({ ...p, teamName: t.name, isUser: t.isUser });
-    });
-  });
-
-  allPickedPlayers.sort((a, b) => Number(b.ポイント || 0) - Number(a.ポイント || 0));
-  globalTopPlayers = allPickedPlayers.slice(0, 10);
 
   writeLog("<br>==================================================");
   writeLog("🏆 <b>【全 7 周 終了】ドラフト会議 最終総合順位・獲得pt発表！</b>");
@@ -2229,53 +2215,43 @@ function announceFinalStandings() {
   if (gameMode === "multi" && isHost) {
     db.ref(`rooms/${currentRoomId}/finalResults`).set({
       standings: globalStandings.map(s => ({ teamId: s.team.id, teamName: s.team.name, totalPt: s.totalPt, picksCount: s.picksCount, isUser: s.team.isUser })),
-      topPlayers: globalTopPlayers,
       ts: Date.now()
     });
     document.getElementById("closeRoomBtn").style.display = "inline-block";
   }
 
-  showFinalTab("team");
+  showFinalTab();
 }
 
-function showFinalTab(tabType) {
+function showFinalTab() {
   const panel = document.getElementById("roundBoardPanel");
   const title = document.getElementById("roundBoardTitle");
   const subStatus = document.getElementById("roundBoardSubStatus");
   const content = document.getElementById("roundBoardContent");
 
   title.innerText = "🏆 全7周 ドラフト会議 最終結果発表 🏆";
-  subStatus.innerText = "タブを切り替えてランキングを確認できます";
+  subStatus.innerText = "球団ごとの獲得ptによる最終順位";
 
-  let tabHeaderHtml = `
-    <div class="final-tabs">
-      <button class="final-tab-btn ${tabType === 'team' ? 'active' : ''}" onclick="showFinalTab('team')">📊 球団総合順位</button>
-      <button class="final-tab-btn ${tabType === 'player' ? 'active' : ''}" onclick="showFinalTab('player')">🌟 獲得選手 指名ptトップ10</button>
-    </div>
-  `;
+  let rowsHtml = "";
+  globalStandings.forEach((item, index) => {
+    const finalRank = index + 1;
+    let rankBadge = `${finalRank}位`;
+    if (finalRank === 1) rankBadge = `<span style="color:#d84315; font-weight:900; font-size:16px;">🥇 優勝 (1位)</span>`;
+    else if (finalRank === 2) rankBadge = `<span style="color:#546e7a; font-weight:900; font-size:15px;">🥈 2位</span>`;
+    else if (finalRank === 3) rankBadge = `<span style="color:#8d6e63; font-weight:900; font-size:15px;">🥉 3位</span>`;
 
-  let bodyHtml = "";
+    rowsHtml += `
+      <tr class="${item.team.isUser ? 'user-row' : ''}">
+        <td>${rankBadge}</td>
+        <td><b>${item.team.name}</b></td>
+        <td>${item.picksCount} 名</td>
+        <td style="color:#d81b60; font-size:16px; font-weight:900;">${item.totalPt} pt</td>
+      </tr>
+    `;
+  });
 
-  if (tabType === 'team') {
-    let rowsHtml = "";
-    globalStandings.forEach((item, index) => {
-      const finalRank = index + 1;
-      let rankBadge = `${finalRank}位`;
-      if (finalRank === 1) rankBadge = `<span style="color:#d84315; font-weight:900; font-size:16px;">🥇 優勝 (1位)</span>`;
-      else if (finalRank === 2) rankBadge = `<span style="color:#546e7a; font-weight:900; font-size:15px;">🥈 2位</span>`;
-      else if (finalRank === 3) rankBadge = `<span style="color:#8d6e63; font-weight:900; font-size:15px;">🥉 3位</span>`;
-
-      rowsHtml += `
-        <tr class="${item.team.isUser ? 'user-row' : ''}">
-          <td>${rankBadge}</td>
-          <td><b>${item.team.name}</b></td>
-          <td>${item.picksCount} 名</td>
-          <td style="color:#d81b60; font-size:16px; font-weight:900;">${item.totalPt} pt</td>
-        </tr>
-      `;
-    });
-
-    bodyHtml = `
+  content.innerHTML = `
+    <div class="final-standing-box">
       <table class="final-table">
         <thead>
           <tr>
@@ -2287,45 +2263,8 @@ function showFinalTab(tabType) {
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
-    `;
-  } else {
-    let rowsHtml = "";
-    globalTopPlayers.forEach((p, idx) => {
-      const rank = idx + 1;
-      let medal = `${rank}位`;
-      if (rank === 1) medal = `🥇 1位`;
-      else if (rank === 2) medal = `🥈 2位`;
-      else if (rank === 3) medal = `🥉 3位`;
-
-      const orig = normalizeOrigin(p.出身);
-      rowsHtml += `
-        <tr class="${p.isUser ? 'user-row' : ''}">
-          <td style="font-weight:bold;">${medal}</td>
-          <td><b style="font-size:15px;">${p.名前}</b> <span class="badge badge-${orig}">${orig}</span></td>
-          <td>${p.所属 || '-'}</td>
-          <td><small style="color:#5e35b1;">${p.teamName}</small></td>
-          <td style="color:#d81b60; font-size:16px; font-weight:900;">${p.ポイント} pt</td>
-        </tr>
-      `;
-    });
-
-    bodyHtml = `
-      <table class="final-table">
-        <thead>
-          <tr>
-            <th>順位</th>
-            <th>選手名 / 出身</th>
-            <th>所属</th>
-            <th>指名球団</th>
-            <th>能力値</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-    `;
-  }
-
-  content.innerHTML = `<div class="final-standing-box">${tabHeaderHtml}${bodyHtml}</div>`;
+    </div>
+  `;
   panel.scrollIntoView({ behavior: 'smooth' });
 }
 

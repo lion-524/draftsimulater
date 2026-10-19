@@ -4,7 +4,7 @@
  * ?page=rules パラメータ付きアクセス時はルール解説画面（rules.html）を表示
  */
 function doGet(e) {
-  // パラメータ ?page=rules が指定された場合は別タブ用のルール説明ページを表示
+  // パラメータ ?page=rules が指定された場合はルール説明ページを表示
   if (e && e.parameter && e.parameter.page === 'rules') {
     return HtmlService.createTemplateFromFile('rules')
       .evaluate()
@@ -20,7 +20,7 @@ function doGet(e) {
 }
 
 /**
- * 現在デプロイされているWebアプリケーションのURLを取得（フロントエンドから別タブを開く際に使用）
+ * 現在デプロイされているWebアプリケーションのURLを取得（フロントエンドの画面遷移に使用）
  */
 function getAppUrl() {
   return ScriptApp.getService().getUrl();
