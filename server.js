@@ -12,6 +12,7 @@ const publicFiles = new Map([
   ["index.html", "index.html"],
   ["rules.html", "rules.html"],
   ["og-image.png", "og-image.png"],
+  ["og-image-v3.jpg", "og-image-v3.jpg"],
   ["style.css", "style.css"],
   ["app.js", "app.js"],
   ["坂道ドラフト - シート1.csv", csvPath],
