@@ -325,6 +325,7 @@
   .formation-card > div { min-width: 0; }
   .pos-label { width: auto; }
   .stage-visualizer { padding: 18px 10px; }
+  .stage-row { flex-wrap: nowrap; justify-content: safe center; max-width: 100%; overflow-x: auto; padding: 4px 2px 10px; }
   .baseball-lineup-table th, .baseball-lineup-table td { padding: 6px 4px; font-size: 12px; }
   .baseball-lineup-table select { padding: 6px 2px; font-size: 12px; }
   #baseballCaptureArea { padding: 12px !important; }
@@ -348,7 +349,7 @@
   .final-tab-btn { font-size: 11px; }
   .formation-card .pos-row { align-items: stretch; }
   .formation-card .pos-row select { width: 100%; max-width: none; }
-  .stage-row { display: flex; flex-wrap: nowrap; justify-content: safe center; gap: 5px; max-width: 100%; overflow-x: auto; padding: 4px 2px 10px; }
+  .stage-row { gap: 5px; }
   .stage-row .member-slot { flex: 0 0 58px; width: 58px; box-sizing: border-box; padding: 6px 3px; }
   .stage-row .member-avatar { width: 34px !important; height: 42px !important; }
   .stage-row .member-slot-name { font-size: 9px !important; }

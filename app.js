@@ -3186,7 +3186,34 @@ function exportFormationToPNG(targetId, filename) {
     captureContainer.style.position = "fixed";
     captureContainer.style.left = "-12000px";
     captureContainer.style.top = "0";
+    captureContainer.style.width = "1200px";
+    captureContainer.style.height = "675px";
+    captureContainer.style.overflow = "hidden";
     captureTarget.classList.add("stage-export-capture");
+    Object.assign(captureTarget.style, {
+      width: "1200px",
+      height: "675px",
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      overflow: "hidden"
+    });
+    captureTarget.querySelectorAll(".stage-row").forEach(row => {
+      Object.assign(row.style, {
+        width: "100%",
+        flexWrap: "nowrap",
+        overflow: "visible",
+        justifyContent: "center"
+      });
+      row.querySelectorAll(".member-slot").forEach(slot => {
+        Object.assign(slot.style, {
+          width: "85px",
+          flex: "0 0 85px",
+          boxSizing: "border-box"
+        });
+      });
+    });
     captureContainer.appendChild(captureTarget);
     document.body.appendChild(captureContainer);
   }
