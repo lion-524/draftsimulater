@@ -3070,31 +3070,43 @@ function applySoccerTemplate() {
     slot.querySelector(".sport-player-select")?.value || ""
   ]));
   pitch.innerHTML = "";
+  const fieldMarkings = document.createElement("div");
+  fieldMarkings.className = "soccer-field-markings";
+  fieldMarkings.setAttribute("aria-hidden", "true");
+  fieldMarkings.innerHTML = `
+    <span class="soccer-penalty-area soccer-penalty-area-top"></span>
+    <span class="soccer-penalty-area soccer-penalty-area-bottom"></span>
+    <span class="soccer-goal-area soccer-goal-area-top"></span>
+    <span class="soccer-goal-area soccer-goal-area-bottom"></span>
+    <span class="soccer-goal soccer-goal-top"></span>
+    <span class="soccer-goal soccer-goal-bottom"></span>
+  `;
+  pitch.appendChild(fieldMarkings);
 
   const templateType = document.getElementById("soccerTemplate").value;
   let coords = [];
 
   switch (templateType) {
     case "442":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:35,y:70},{pos:"CB",x:62,y:70},{pos:"SB",x:15,y:65},{pos:"SB",x:82,y:65},{pos:"MF",x:30,y:45},{pos:"MF",x:68,y:45},{pos:"MF",x:42,y:45},{pos:"MF",x:56,y:45},{pos:"FW",x:38,y:20},{pos:"FW",x:60,y:20}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:39,y:73},{pos:"CB",x:61,y:73},{pos:"SB",x:15,y:65},{pos:"SB",x:85,y:65},{pos:"MF",x:12,y:46},{pos:"MF",x:37,y:46},{pos:"MF",x:63,y:46},{pos:"MF",x:88,y:46},{pos:"FW",x:38,y:22},{pos:"FW",x:62,y:22}];
       break;
     case "4231":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:35,y:70},{pos:"CB",x:62,y:70},{pos:"SB",x:15,y:65},{pos:"SB",x:82,y:65},{pos:"DMF",x:38,y:55},{pos:"DMF",x:58,y:55},{pos:"OMF",x:48,y:38},{pos:"WG",x:20,y:32},{pos:"WG",x:76,y:32},{pos:"CF",x:48,y:16}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:39,y:73},{pos:"CB",x:61,y:73},{pos:"SB",x:15,y:65},{pos:"SB",x:85,y:65},{pos:"DMF",x:38,y:56},{pos:"DMF",x:62,y:56},{pos:"OMF",x:50,y:40},{pos:"WG",x:18,y:34},{pos:"WG",x:82,y:34},{pos:"CF",x:50,y:20}];
       break;
     case "4132":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:35,y:70},{pos:"CB",x:62,y:70},{pos:"SB",x:15,y:65},{pos:"SB",x:82,y:65},{pos:"DMF",x:48,y:60},{pos:"MF",x:22,y:40},{pos:"MF",x:48,y:42},{pos:"MF",x:74,y:40},{pos:"FW",x:38,y:18},{pos:"FW",x:60,y:18}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:39,y:73},{pos:"CB",x:61,y:73},{pos:"SB",x:15,y:65},{pos:"SB",x:85,y:65},{pos:"DMF",x:50,y:60},{pos:"MF",x:20,y:42},{pos:"MF",x:50,y:42},{pos:"MF",x:80,y:42},{pos:"FW",x:38,y:21},{pos:"FW",x:62,y:21}];
       break;
     case "433":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:35,y:70},{pos:"CB",x:62,y:70},{pos:"SB",x:15,y:65},{pos:"SB",x:82,y:65},{pos:"DMF",x:48,y:52},{pos:"CMF",x:32,y:38},{pos:"CMF",x:65,y:38},{pos:"WG",x:18,y:20},{pos:"CF",x:48,y:15},{pos:"WG",x:78,y:20}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:39,y:73},{pos:"CB",x:61,y:73},{pos:"SB",x:15,y:65},{pos:"SB",x:85,y:65},{pos:"DMF",x:50,y:54},{pos:"CMF",x:35,y:39},{pos:"CMF",x:65,y:39},{pos:"WG",x:18,y:23},{pos:"CF",x:50,y:19},{pos:"WG",x:82,y:23}];
       break;
     case "343":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:28,y:72},{pos:"CB",x:48,y:74},{pos:"CB",x:68,y:72},{pos:"MF",x:18,y:45},{pos:"MF",x:38,y:45},{pos:"MF",x:58,y:45},{pos:"MF",x:78,y:45},{pos:"WG",x:22,y:20},{pos:"CF",x:48,y:15},{pos:"WG",x:74,y:20}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:30,y:73},{pos:"CB",x:50,y:76},{pos:"CB",x:70,y:73},{pos:"MF",x:12,y:48},{pos:"MF",x:37,y:48},{pos:"MF",x:63,y:48},{pos:"MF",x:88,y:48},{pos:"WG",x:20,y:23},{pos:"CF",x:50,y:19},{pos:"WG",x:80,y:23}];
       break;
     case "3241":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:28,y:72},{pos:"CB",x:48,y:74},{pos:"CB",x:68,y:72},{pos:"DMF",x:38,y:58},{pos:"DMF",x:58,y:58},{pos:"OMF",x:18,y:38},{pos:"OMF",x:38,y:38},{pos:"OMF",x:58,y:38},{pos:"OMF",x:78,y:38},{pos:"CF",x:48,y:16}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:30,y:73},{pos:"CB",x:50,y:76},{pos:"CB",x:70,y:73},{pos:"DMF",x:38,y:58},{pos:"DMF",x:62,y:58},{pos:"OMF",x:12,y:39},{pos:"OMF",x:37,y:39},{pos:"OMF",x:63,y:39},{pos:"OMF",x:88,y:39},{pos:"CF",x:50,y:20}];
       break;
     case "352":
-      coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:28,y:72},{pos:"CB",x:48,y:74},{pos:"CB",x:68,y:72},{pos:"WB",x:12,y:48},{pos:"WB",x:84,y:48},{pos:"MF",x:38,y:45},{pos:"MF",x:58,y:45},{pos:"MF",x:48,y:32},{pos:"FW",x:38,y:18},{pos:"FW",x:58,y:18}];
+      coords = [{pos:"GK",x:50,y:89},{pos:"CB",x:30,y:73},{pos:"CB",x:50,y:76},{pos:"CB",x:70,y:73},{pos:"WB",x:12,y:48},{pos:"WB",x:88,y:48},{pos:"MF",x:35,y:48},{pos:"MF",x:65,y:48},{pos:"MF",x:50,y:34},{pos:"FW",x:38,y:21},{pos:"FW",x:62,y:21}];
       break;
     default:
       coords = [{pos:"GK",x:48,y:88},{pos:"CB",x:35,y:70},{pos:"CB",x:62,y:70},{pos:"SB",x:15,y:65},{pos:"SB",x:82,y:65},{pos:"MF",x:30,y:45},{pos:"MF",x:68,y:45},{pos:"MF",x:42,y:45},{pos:"MF",x:56,y:45},{pos:"FW",x:38,y:20},{pos:"FW",x:60,y:20}];
@@ -3167,7 +3179,19 @@ function exportFormationToPNG(targetId, filename) {
   const target = document.getElementById(targetId);
   if (!target) return;
 
-  html2canvas(target, {
+  const captureTarget = targetId === "stageCaptureArea" ? target.cloneNode(true) : target;
+  let captureContainer = null;
+  if (captureTarget !== target) {
+    captureContainer = document.createElement("div");
+    captureContainer.style.position = "fixed";
+    captureContainer.style.left = "-12000px";
+    captureContainer.style.top = "0";
+    captureTarget.classList.add("stage-export-capture");
+    captureContainer.appendChild(captureTarget);
+    document.body.appendChild(captureContainer);
+  }
+
+  html2canvas(captureTarget, {
     scale: 2,
     useCORS: true,
     backgroundColor: null
@@ -3178,5 +3202,7 @@ function exportFormationToPNG(targetId, filename) {
     link.click();
   }).catch(err => {
     alert("画像の生成に失敗しました: " + err.message);
+  }).finally(() => {
+    captureContainer?.remove();
   });
 }

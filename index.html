@@ -231,7 +231,7 @@
     <!-- ③ サッカーピッチパネル -->
     <div id="sportPanelSoccer" class="sport-panel" style="display:none;">
       <div class="formation-card">
-        <div style="margin-bottom:15px; display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+        <div class="soccer-setup">
           <strong>フォーメーション:</strong>
           <select id="soccerTemplate" onchange="applySoccerTemplate()" style="min-width: 200px;">
             <option value="442">4 - 4 - 2</option>
@@ -242,10 +242,10 @@
             <option value="3241">3 - 2 - 4 - 1</option>
             <option value="352">3 - 5 - 2</option>
           </select>
-          <span style="font-size:12px; color:#78909c;">※アイコンを長押し＆ドラッグしてピッチ上を自由に移動できます</span>
+          <span class="soccer-hint">※選手をドラッグして配置を調整できます</span>
         </div>
-        <div id="soccerCaptureArea" style="background:#1a237e; padding:20px; border-radius:8px; text-align:center;">
-          <h3 style="color:#ffd700; margin-top:0;">⚽ サッカー 戦術・フォーメーション配置</h3>
+        <div id="soccerCaptureArea" class="soccer-capture-area">
+          <h3>⚽ サッカー 戦術・フォーメーション配置</h3>
           <div id="soccerPitch" class="soccer-pitch"></div>
         </div>
       </div>
