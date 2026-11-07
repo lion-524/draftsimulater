@@ -1319,7 +1319,7 @@ function initRoundBoard(attempt = 0, currentBiddingSlotIds = []) {
         `;
       }
     } else if (isTargetTeam) {
-      bodyHtml = `<div class="card-closed">【 入札封筒 未開封 】</div>`;
+      bodyHtml = `<div class="unopened-team-name">${t.name}</div>`;
     } else if (t.isFinished) {
       bodyHtml = `<div class="pass-state">なし</div>`;
     } else {
@@ -1329,7 +1329,7 @@ function initRoundBoard(attempt = 0, currentBiddingSlotIds = []) {
     cell.innerHTML = `
       <div class="npb-cell-header ${t.isUser ? 'is-user' : ''}">
         <span>${t.name}</span>
-        <span class="status-slot">${pick ? (pick.isPass ? '<span style="color:#78909c;">終了</span>' : '<span style="color:#2e7d32; font-weight:bold;">確定</span>') : (isTargetTeam ? `${t.rank}位 (開票前)` : `${t.rank}位`)}</span>
+        <span class="status-slot">${pick ? (pick.isPass ? '<span style="color:#78909c;">終了</span>' : '<span style="color:#2e7d32; font-weight:bold;">確定</span>') : `${t.rank}位`}</span>
       </div>
       <div class="npb-cell-body">${bodyHtml}</div>
     `;
@@ -2132,7 +2132,7 @@ async function executeSyncedWaiverStep(slotId, playerName, targetRound, revealKe
   if (cell) {
     cell.classList.add("is-active-turn");
     const body = cell.querySelector(".npb-cell-body");
-    if (body) body.innerHTML = `<div class="card-closed">【指名結果 未開封】</div>`;
+    if (body) body.innerHTML = `<div class="unopened-team-name">${team.name}</div>`;
     const orderIndex = Math.max(0, waiverOrder.findIndex(item => item.id === team.id));
     showDraftRevealModal(cell, { team }, orderIndex, waiverOrder.length || maxTeams, 0);
   }
