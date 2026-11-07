@@ -553,12 +553,20 @@ function enterLobbyWait(amIHost) {
 
       let slotDiv = document.createElement("div");
       slotDiv.className = `lobby-slot ${!s.isCpu ? 'occupied' : ''}`;
+      const rankControl = isMe && !s.isCpu ? `
+        <label class="lobby-rank-control">指名順
+          <select aria-label="自チームの指名順" onchange="changeLobbyRank(this.value)">
+            ${Array.from({ length: maxTeams }, (_, index) => index + 1).map(rank => `<option value="${rank}" ${rank === teams[i].rank ? 'selected' : ''}>${rank}位</option>`).join("")}
+          </select>
+        </label>
+      ` : "";
       slotDiv.innerHTML = `
         <div style="font-size:12px; color:#546e7a;">スロット ${i + 1} (${teams[i].rank}位)</div>
         <div style="font-size:14px; margin-top:4px;"><b>${teams[i].name}</b></div>
         <div style="font-size:11px; color:${s.isCpu ? '#78909c' : '#00897b'}; font-weight:bold; margin-top:2px;">
           ${s.isCpu ? '🤖 CPU' : '👤 人間'}
         </div>
+        ${rankControl}
       `;
       grid.appendChild(slotDiv);
     }
@@ -601,6 +609,30 @@ function enterLobbyWait(amIHost) {
       alert("ホストによってルームが開放・解散されました。初期画面に戻ります。");
       confirmReset();
     }
+  });
+}
+
+function changeLobbyRank(value) {
+  const requestedRank = Number(value);
+  if (!currentRoomId || !Number.isInteger(requestedRank) || requestedRank < 1 || requestedRank > maxTeams) return;
+
+  db.ref(`rooms/${currentRoomId}`).transaction(room => {
+    if (!room || room.status !== "waiting" || !room.slots) return;
+
+    const mySlot = room.slots[`slot_${myPlayerSlot}`];
+    if (!mySlot || mySlot.isCpu) return;
+
+    const otherSlot = Object.values(room.slots).find(slot => Number(slot.rank) === requestedRank);
+    if (!otherSlot) return;
+
+    const previousRank = Number(mySlot.rank);
+    otherSlot.rank = previousRank;
+    mySlot.rank = requestedRank;
+    return room;
+  }).then(result => {
+    if (!result.committed) writeLog("順位を変更できませんでした。ドラフト開始前にもう一度お試しください。");
+  }).catch(error => {
+    writeLog(`<span style="color:#ff5252;">順位の同期に失敗しました: ${error.message}</span>`);
   });
 }
 
@@ -654,7 +686,7 @@ function setupDraftGameListeners() {
           : (sessionPool.find(p => p.名前 === item.playerName) || allMasterData.find(p => p.名前 === item.playerName));
         return { team: teams[item.slot], choice: pChoice };
       });
-      await executeSyncedReveal(bids, event.attempt || 0);
+      await executeSyncedReveal(bids, event.attempt || 0, event.revealKey || event.ts);
     }
 
     if (!isHost && (event.type === "pick_confirmed" || event.type === "round_all_picks_confirmed")) {
@@ -742,7 +774,11 @@ function setupDraftGameListeners() {
     }
 
     if (event.type === "waiver_step") {
-      executeSyncedWaiverStep(event.slot, event.playerName, event.round || round);
+      await executeSyncedWaiverStep(event.slot, event.playerName, event.round || round, event.revealKey || event.ts);
+      if (isHost) {
+        currentWaiverIndex++;
+        advanceToNextWaiverTurn();
+      }
     }
 
     if (event.type === "next_session_start" && !isHost) {
@@ -1227,13 +1263,14 @@ function waitForAllBidsAndProceed() {
         return;
       }
 
+      const revealKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       db.ref(`rooms/${currentRoomId}/roundEvent`).set({
         type: "round_reveal",
         bids: bids.map(b => ({ slot: b.team.id, playerName: b.choice.名前 })),
-        attempt: 0
+        attempt: 0,
+        revealKey
       });
-
-      await executeSyncedReveal(bids, 0);
+      await executeSyncedReveal(bids, 0, revealKey);
     }
   });
 }
@@ -1300,7 +1337,7 @@ function initRoundBoard(attempt = 0, currentBiddingSlotIds = []) {
   });
 }
 
-async function executeSyncedReveal(bids, attempt = 0) {
+async function executeSyncedReveal(bids, attempt = 0, revealKey = null) {
   const boardPanel = document.getElementById("roundBoardPanel");
   if (boardPanel) {
     boardPanel.style.display = "block";
@@ -1314,6 +1351,12 @@ async function executeSyncedReveal(bids, attempt = 0) {
   const subStatus = document.getElementById("roundBoardSubStatus");
   let openOrderBids = [...bids].sort((a, b) => b.team.rank - a.team.rank);
   let openedSoFar = [];
+  const isMulti = gameMode === "multi";
+  const controlRef = isMulti ? db.ref(`rooms/${currentRoomId}/revealControl`) : null;
+  const currentRevealKey = revealKey || `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  if (isMulti && isHost) {
+    await controlRef.set({ key: currentRevealKey, openedIndex: 0 });
+  }
 
   for (let i = 0; i < openOrderBids.length; i++) {
     const b = openOrderBids[i];
@@ -1325,8 +1368,12 @@ async function executeSyncedReveal(bids, attempt = 0) {
 
     cell.classList.add("is-active-turn");
     subStatus.innerText = `【開票】${b.team.name}(${b.team.rank}位) 開票中...`;
-
-    await new Promise(res => setTimeout(res, 450));
+    showDraftRevealModal(cell, b, i, openOrderBids.length, attempt);
+    if (isMulti) {
+      await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 1);
+    } else {
+      await new Promise(res => setTimeout(res, 450));
+    }
 
     cell.classList.remove("is-active-turn");
     cell.classList.add("opening-now");
@@ -1374,8 +1421,20 @@ async function executeSyncedReveal(bids, attempt = 0) {
       writeLog(`${logPrefix} ${b.team.name} ➔ <b>${b.choice.名前}</b> [${originLabel}] ${b.choice.所属 ? `(${b.choice.所属})` : ''}${isConflictNow ? ' <span style="color:#ff9800; font-weight:bold;">【重複発生】</span>' : ''}`);
     }
 
+    refreshDraftRevealCard(cell);
+    if (isMulti) {
+      document.getElementById("draftRevealGuide").innerText = isHost
+        ? "Enterキーで次の球団へ進む"
+        : "ホストのEnterで次の球団へ進みます";
+      if (isHost) await controlRef.update({ openedIndex: (i * 2) + 1 });
+      await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 2);
+      if (isHost) await controlRef.update({ openedIndex: (i * 2) + 2 });
+    }
+
     await new Promise(res => setTimeout(res, 200));
   }
+
+  document.getElementById("draftRevealModal").style.display = "none";
 
   let counts = {};
   bids.filter(b => !b.choice.isPass).forEach(b => {
@@ -1420,6 +1479,51 @@ async function executeSyncedReveal(bids, attempt = 0) {
       }, 600);
     }
   }
+}
+
+function showDraftRevealModal(cell, bid, index, total, attempt) {
+  const modal = document.getElementById("draftRevealModal");
+  const title = document.getElementById("draftRevealTitle");
+  const guide = document.getElementById("draftRevealGuide");
+  modal.dataset.step = String(index + 1);
+  title.innerText = `${attempt === 0 ? `第${round}巡目` : `外れ指名・第${attempt}回`} 開票 ${index + 1} / ${total}　${bid.team.name} (${bid.team.rank}位)`;
+  guide.innerText = gameMode === "multi"
+    ? (isHost ? "Enterキーで指名者名を公開" : "ホストの開票操作を待っています")
+    : "指名ボードに反映します";
+  const preview = cell.cloneNode(true);
+  preview.removeAttribute("id");
+  document.getElementById("draftRevealCard").replaceChildren(preview);
+  modal.style.display = "flex";
+}
+
+function refreshDraftRevealCard(cell) {
+  const preview = cell.cloneNode(true);
+  preview.removeAttribute("id");
+  document.getElementById("draftRevealCard").replaceChildren(preview);
+}
+
+function waitForRevealOpen(controlRef, revealKey, openedIndex) {
+  if (isHost) {
+    return new Promise(resolve => {
+      const onKeyDown = event => {
+        if (event.key !== "Enter" || event.repeat || document.getElementById("draftRevealModal").style.display !== "flex") return;
+        event.preventDefault();
+        document.removeEventListener("keydown", onKeyDown);
+        resolve();
+      };
+      document.addEventListener("keydown", onKeyDown);
+    });
+  }
+
+  return new Promise(resolve => {
+    const onValue = snapshot => {
+      const state = snapshot.val();
+      if (!state || state.key !== revealKey || Number(state.openedIndex) < openedIndex) return;
+      controlRef.off("value", onValue);
+      resolve();
+    };
+    controlRef.on("value", onValue);
+  });
 }
 
 function chooseCpuPick(pool, teamObj = null) {
@@ -1724,15 +1828,17 @@ function handleMultiReNomination(losers, onFinish, confirmedList = []) {
       else nextBids.push({ team: t, choice: PASS_PLAYER });
     });
 
+    const revealKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     db.ref(`rooms/${currentRoomId}/roundEvent`).set({
       type: "re_nomination_reveal",
       bids: nextBids.map(b => ({ slot: b.team.id, playerName: b.choice.名前 })),
       attempt: currentAttempt,
+      revealKey,
       confirmedList: confirmedList,
       ts: Date.now()
     });
 
-    executeSyncedReveal(nextBids, currentAttempt);
+    executeSyncedReveal(nextBids, currentAttempt, revealKey);
     return;
   }
 
@@ -1765,15 +1871,17 @@ function handleMultiReNomination(losers, onFinish, confirmedList = []) {
         }
       });
 
+      const revealKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       db.ref(`rooms/${currentRoomId}/roundEvent`).set({
         type: "re_nomination_reveal",
         bids: nextBids.map(b => ({ slot: b.team.id, playerName: b.choice.名前 })),
         attempt: currentAttempt,
+        revealKey,
         confirmedList: confirmedList,
         ts: Date.now()
       });
 
-      await executeSyncedReveal(nextBids, currentAttempt);
+      await executeSyncedReveal(nextBids, currentAttempt, revealKey);
     }
   });
 }
@@ -1927,18 +2035,15 @@ function advanceToNextWaiverTurn() {
       return;
     }
 
-    assignPick(candidate, PASS_PLAYER, round);
-    openWaiverCell(candidate, PASS_PLAYER);
-    
     db.ref(`rooms/${currentRoomId}/roundEvent`).set({
       type: "waiver_step",
       slot: candidate.id,
       playerName: PASS_PLAYER.名前,
       round: round,
+      revealKey: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
       ts: Date.now()
     });
-
-    currentWaiverIndex++;
+    return;
   }
 
   db.ref(`rooms/${currentRoomId}/activeWaiverSlot`).set(null);
@@ -1999,20 +2104,20 @@ function handleWaiverTurn(activeSlotId) {
     submitRef.off();
 
     if (isHost) {
+      const revealKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       db.ref(`rooms/${currentRoomId}/roundEvent`).set({
         type: "waiver_step",
         slot: data.slot,
         playerName: data.playerName,
         round: round,
+        revealKey,
         ts: Date.now()
       });
-      currentWaiverIndex++;
-      setTimeout(advanceToNextWaiverTurn, 250);
     }
   });
 }
 
-function executeSyncedWaiverStep(slotId, playerName, targetRound) {
+async function executeSyncedWaiverStep(slotId, playerName, targetRound, revealKey = null) {
   const team = teams[slotId];
   const useRound = targetRound || round;
 
@@ -2020,19 +2125,43 @@ function executeSyncedWaiverStep(slotId, playerName, targetRound) {
     ? PASS_PLAYER 
     : (sessionPool.find(p => p.名前 === playerName) || allMasterData.find(p => p.名前 === playerName));
 
-  if (pickedPlayer) {
-    assignPick(team, pickedPlayer, useRound);
-    if (!pickedPlayer.isPass) {
-      sessionPool = sessionPool.filter(p => p.名前 !== playerName);
-      const orig = normalizeOrigin(pickedPlayer.出身);
-      writeLog(`[確定] ${team.name} ➔ <b>${pickedPlayer.名前}</b> [${orig}] ${pickedPlayer.所属 ? `(${pickedPlayer.所属})` : ''}`);
-    } else {
-      team.isFinished = true;
-      writeLog(`🛑 ${team.name} は【選択終了】`);
-    }
-    openWaiverCell(team, pickedPlayer);
-    renderTeams();
+  if (!team || !pickedPlayer) return;
+
+  const controlRef = db.ref(`rooms/${currentRoomId}/revealControl`);
+  const currentRevealKey = revealKey || `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  if (isHost) await controlRef.set({ key: currentRevealKey, openedIndex: 0 });
+
+  const cell = document.getElementById(`npb-cell-slot-${team.id}`);
+  if (cell) {
+    cell.classList.add("is-active-turn");
+    const body = cell.querySelector(".npb-cell-body");
+    if (body) body.innerHTML = `<div class="card-closed">【指名結果 未開封】</div>`;
+    const orderIndex = Math.max(0, waiverOrder.findIndex(item => item.id === team.id));
+    showDraftRevealModal(cell, { team }, orderIndex, waiverOrder.length || maxTeams, 0);
   }
+
+  await waitForRevealOpen(controlRef, currentRevealKey, 1);
+
+  assignPick(team, pickedPlayer, useRound);
+  if (!pickedPlayer.isPass) {
+    sessionPool = sessionPool.filter(p => p.名前 !== playerName);
+    const orig = normalizeOrigin(pickedPlayer.出身);
+    writeLog(`[確定] ${team.name} ➔ <b>${pickedPlayer.名前}</b> [${orig}] ${pickedPlayer.所属 ? `(${pickedPlayer.所属})` : ''}`);
+  } else {
+    team.isFinished = true;
+    writeLog(`🛑 ${team.name} は【選択終了】`);
+  }
+  openWaiverCell(team, pickedPlayer);
+  renderTeams();
+  refreshDraftRevealCard(cell);
+  document.getElementById("draftRevealGuide").innerText = isHost
+    ? "Enterキーで次の球団へ進む"
+    : "ホストのEnterで次の球団へ進みます";
+  if (isHost) await controlRef.update({ openedIndex: 1 });
+
+  await waitForRevealOpen(controlRef, currentRevealKey, 2);
+  if (isHost) await controlRef.update({ openedIndex: 2 });
+  document.getElementById("draftRevealModal").style.display = "none";
 }
 
 function initWaiverRoundBoard(targetRound, isEvenRound) {

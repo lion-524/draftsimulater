@@ -87,6 +87,10 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await guest.getByRole("button", { name: "部屋を作成 / 参加" }).click();
   await expect(guest.locator("#roomWaitArea")).toBeVisible();
 
+  await guest.locator(".lobby-rank-control select").selectOption("8");
+  await expect.poll(() => host.evaluate(() => teams.map(team => team.rank))).toEqual([7, 8, 6, 5, 4, 3, 2, 1]);
+  await expect.poll(() => guest.evaluate(() => teams.map(team => team.rank))).toEqual([7, 8, 6, 5, 4, 3, 2, 1]);
+
   await host.locator("#multiStartBtn").click();
   await expect(host.locator("#playerDropdown option").first()).toBeAttached();
   await expect(guest.locator("#playerDropdown option").first()).toBeAttached();
@@ -130,6 +134,20 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await host.locator("#nominateBtn").click();
   await guest.locator("#nominateBtn").click();
 
+  for (let step = 1; step <= 8; step++) {
+    await expect(host.locator("#draftRevealModal")).toBeVisible();
+    await expect(host.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step));
+    await expect(guest.locator("#draftRevealModal")).toBeVisible();
+    await expect(guest.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step));
+    await host.keyboard.press("Enter");
+    await expect(host.locator("#draftRevealGuide")).toContainText("次の球団へ");
+    await expect(guest.locator("#draftRevealGuide")).toContainText("次の球団へ");
+    await host.keyboard.press("Enter");
+    if (step < 8) {
+      await expect(host.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step + 1));
+    }
+  }
+
   await expect(host.locator("#lotteryModal")).toBeVisible();
   await expect(guest.locator("#lotteryModal")).toBeVisible();
   await expect(host.locator("#lotteryDetails")).toContainText("第1引: E2E Guest");
@@ -162,6 +180,14 @@ test("host and guest keep lottery results in their pick history", async ({ brows
     options.map(option => option.value).find(value => value && value !== pickedName), sharedName
   );
   expect(nextName).toBeTruthy();
+  await host.evaluate(() => {
+    window._testRevealEnter = setInterval(() => {
+      const modal = document.getElementById("draftRevealModal");
+      if (modal?.style.display === "flex") {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      }
+    }, 250);
+  });
   await loserPage.locator("#playerDropdown").selectOption(nextName);
   await loserPage.locator("#nominateBtn").click();
 
@@ -190,6 +216,31 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   });
   expect(duplicateOwners).toEqual([]);
   expect(errors).toEqual([]);
+  await host.evaluate(() => clearInterval(window._testRevealEnter));
+
+  await expect(host.locator("#readyNextRoundBtn")).toBeVisible({ timeout: 60_000 });
+  await expect(guest.locator("#readyNextRoundBtn")).toBeVisible();
+  await host.locator("#readyNextRoundBtn").click();
+  await guest.locator("#readyNextRoundBtn").click();
+  await expect(guest.locator("#actionControls")).toBeVisible();
+
+  const waiverName = await guest.locator("#playerDropdown option").evaluateAll(options =>
+    options.find(option => option.value)?.value
+  );
+  expect(waiverName).toBeTruthy();
+  await guest.locator("#playerDropdown").selectOption(waiverName);
+  await guest.locator("#nominateBtn").click();
+  await expect(host.locator("#draftRevealModal")).toBeVisible();
+  await expect(host.locator("#draftRevealTitle")).toContainText("E2E Guest");
+  await host.keyboard.press("Enter");
+  await expect(host.locator("#draftRevealGuide")).toContainText("次の球団へ");
+  await host.keyboard.press("Enter");
+  await expect(host.locator("#draftRevealModal")).toBeHidden();
+
+  await host.keyboard.press("Enter");
+  await expect(host.locator("#draftRevealModal")).toBeHidden();
+  await expect(host.locator("#draftRevealModal")).toBeVisible({ timeout: 10_000 });
+  await expect(host.locator("#draftRevealTitle")).toContainText("CPU");
 
   await host.close();
   await guest.close();
