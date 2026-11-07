@@ -143,6 +143,20 @@ const DRAFT_ROSTER_MODE_LABELS = {
   group_current: "グループ別・現役メンバー (3周)",
   group_registered: "グループ別・在籍経験メンバー (3周)"
 };
+const DRAFT_MODE_CONFIG = {
+  classic_waiver: { draftSystem: "waiver", draftRosterMode: "classic" },
+  classic_all_lottery: { draftSystem: "all_lottery", draftRosterMode: "classic" },
+  all_current: { draftSystem: "waiver", draftRosterMode: "all_current" },
+  all_registered: { draftSystem: "waiver", draftRosterMode: "all_registered" },
+  group_current: { draftSystem: "waiver", draftRosterMode: "group_current" },
+  group_registered: { draftSystem: "waiver", draftRosterMode: "group_registered" }
+};
+
+function applyDraftMode(mode) {
+  const config = DRAFT_MODE_CONFIG[mode] || DRAFT_MODE_CONFIG.classic_waiver;
+  draftSystem = config.draftSystem;
+  draftRosterMode = config.draftRosterMode;
+}
 
 function getDraftSessionCount() {
   if (draftRosterMode === "group_current" || draftRosterMode === "group_registered") return 3;
@@ -367,8 +381,7 @@ function buildBaseballVisualGround() {
 
 function initSoloMode() {
   maxTeams = parseInt(document.getElementById("teamCountSelect").value, 10) || 8;
-  draftSystem = document.getElementById("draftSystemSelect").value;
-  draftRosterMode = document.getElementById("draftRosterModeSelect").value;
+  applyDraftMode(document.getElementById("draftModeSelect").value);
   gameMode = "solo";
   isHost = true;
   myPlayerSlot = 0;
@@ -399,8 +412,7 @@ function openMultiLobbySetup() {
 
 function createOrJoinRoom() {
   maxTeams = parseInt(document.getElementById("teamCountSelect").value, 10) || 8;
-  draftSystem = document.getElementById("draftSystemSelect").value;
-  draftRosterMode = document.getElementById("draftRosterModeSelect").value;
+  applyDraftMode(document.getElementById("draftModeSelect").value);
   const rawId = document.getElementById("inputRoomId").value.trim();
   const rId = rawId.replace(/[^a-zA-Z0-9]/g, "");
   if (!rId || rId.length < 3 || rId.length > 8) { 

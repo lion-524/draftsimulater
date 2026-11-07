@@ -54,17 +54,10 @@
       </div>
 
       <div>
-        <label for="draftSystemSelect" style="font-weight:bold; color:#4527a0; font-size:14px;">指名方式:</label>
-        <select id="draftSystemSelect" style="font-weight:bold; font-size:14px; padding:6px 12px;">
-          <option value="waiver" selected>通常ウェーバー制 (1巡目抽選・2巡目以降ウェーバー)</option>
-          <option value="all_lottery">全巡抽選制 (全巡で重複抽選・外れ再入札)</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="draftRosterModeSelect" style="font-weight:bold; color:#4527a0; font-size:14px;">候補者リスト:</label>
-        <select id="draftRosterModeSelect" style="font-weight:bold; font-size:14px; padding:6px 12px;">
-          <option value="classic" selected>従来方式 (登場週目別・全7周)</option>
+        <label for="draftModeSelect" style="font-weight:bold; color:#4527a0; font-size:14px;">ドラフトモード:</label>
+        <select id="draftModeSelect" style="font-weight:bold; font-size:14px; padding:6px 12px;">
+          <option value="classic_waiver" selected>従来方式・通常ウェーバー制 (全7周)</option>
+          <option value="classic_all_lottery">従来方式・全巡抽選制 (全7周)</option>
           <option value="all_current">全現役メンバー (1周)</option>
           <option value="all_registered">全登録メンバー (1周)</option>
           <option value="group_current">グループ別・現役メンバー (3周)</option>

@@ -3,8 +3,13 @@ import { test, expect } from "@playwright/test";
 test("roster modes create the expected candidate pools", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#loading")).toBeHidden();
+  await expect(page.locator("#draftModeSelect option")).toHaveCount(6);
 
   const pools = await page.evaluate(() => {
+    const modeMappings = [...document.querySelectorAll("#draftModeSelect option")].map(option => {
+      applyDraftMode(option.value);
+      return `${draftSystem}:${draftRosterMode}`;
+    });
     draftRosterMode = "all_current";
     const currentCount = buildSessionPool(1).length;
     const currentMembersOnly = buildSessionPool(1).every(member => member.在籍状況 === "現役");
@@ -21,6 +26,7 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
     draftRosterMode = "classic";
     return {
       currentCount,
+      modeMappings,
       currentMembersOnly,
       registeredCount,
       currentByGroup,
@@ -34,6 +40,14 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
   });
 
   expect(pools.currentCount).toBe(89);
+  expect(pools.modeMappings).toEqual([
+    "waiver:classic",
+    "all_lottery:classic",
+    "waiver:all_current",
+    "waiver:all_registered",
+    "waiver:group_current",
+    "waiver:group_registered"
+  ]);
   expect(pools.currentMembersOnly).toBe(true);
   expect(pools.registeredCount).toBe(204);
   expect(pools.currentByGroup).toEqual([33, 30, 26]);
