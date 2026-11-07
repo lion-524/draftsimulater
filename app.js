@@ -1319,6 +1319,7 @@ function initRoundBoard(attempt = 0, currentBiddingSlotIds = []) {
         `;
       }
     } else if (isTargetTeam) {
+      cell.classList.add("is-unopened");
       bodyHtml = `<div class="unopened-team-name">${t.name}</div>`;
     } else if (t.isFinished) {
       bodyHtml = `<div class="pass-state">なし</div>`;
@@ -1373,6 +1374,7 @@ async function executeSyncedReveal(bids, attempt = 0, revealKey = null) {
 
     cell.classList.remove("is-active-turn");
     cell.classList.add("opening-now");
+    cell.classList.remove("is-unopened");
 
     openedSoFar.push(b);
 
@@ -2131,6 +2133,7 @@ async function executeSyncedWaiverStep(slotId, playerName, targetRound, revealKe
   const cell = document.getElementById(`npb-cell-slot-${team.id}`);
   if (cell) {
     cell.classList.add("is-active-turn");
+    cell.classList.add("is-unopened");
     const body = cell.querySelector(".npb-cell-body");
     if (body) body.innerHTML = `<div class="unopened-team-name">${team.name}</div>`;
     const orderIndex = Math.max(0, waiverOrder.findIndex(item => item.id === team.id));
@@ -2197,6 +2200,7 @@ function openWaiverCell(team, pick) {
   const cell = document.getElementById(`npb-cell-slot-${team.id}`);
   if (!cell) return;
   cell.classList.remove("is-active-turn");
+  cell.classList.remove("is-unopened");
   cell.classList.add("opening-now");
 
   const body = cell.querySelector(".npb-cell-body");
