@@ -54,10 +54,14 @@
       </div>
 
       <div>
-        <label for="draftSystemSelect" style="font-weight:bold; color:#4527a0; font-size:14px;">指名方式:</label>
-        <select id="draftSystemSelect" style="font-weight:bold; font-size:14px; padding:6px 12px;">
-          <option value="waiver" selected>通常ウェーバー制 (1巡目抽選・2巡目以降ウェーバー)</option>
-          <option value="all_lottery">全巡抽選制 (全巡で重複抽選・外れ再入札)</option>
+        <label for="draftModeSelect" style="font-weight:bold; color:#4527a0; font-size:14px;">ドラフトモード:</label>
+        <select id="draftModeSelect" style="font-weight:bold; font-size:14px; padding:6px 12px;">
+          <option value="classic_waiver" selected>従来方式・通常ウェーバー制 (全7周)</option>
+          <option value="classic_all_lottery">従来方式・全巡抽選制 (全7周)</option>
+          <option value="all_current">全現役メンバー (1周)</option>
+          <option value="all_registered">全登録メンバー (1周)</option>
+          <option value="group_current">グループ別・現役メンバー (3周)</option>
+          <option value="group_registered">グループ別・在籍経験メンバー (3周)</option>
         </select>
       </div>
     </div>
@@ -81,6 +85,7 @@
         <span id="hostBadge" style="font-size:12px; background:#5e35b1; color:#fff; padding:2px 6px; border-radius:3px; display:none;">ホスト(親機)</span>
         <span id="dispTeamCountBadge" style="font-size:12px; background:#00897b; color:#fff; padding:2px 6px; border-radius:3px; margin-left:6px;">8球団制</span>
         <span id="dispSystemBadge" style="font-size:12px; background:#e65100; color:#fff; padding:2px 6px; border-radius:3px; margin-left:6px;">通常ウェーバー制</span>
+        <span id="dispRosterModeBadge" style="font-size:12px; background:#546e7a; color:#fff; padding:2px 6px; border-radius:3px; margin-left:6px;"></span>
       </div>
       <div class="lobby-grid" id="lobbySlotsGrid"></div>
       <div style="margin-top:15px;" id="hostControlBtns" style="display:none;">

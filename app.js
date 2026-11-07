@@ -71,6 +71,7 @@ let myPlayerSlot = 0;
 let isHost = false;
 let maxTeams = 8;
 let draftSystem = "waiver";
+let draftRosterMode = "classic";
 
 let allMasterData = []; 
 let currentSession = 1; 
@@ -132,6 +133,66 @@ function normalizeOrigin(val) {
   if (str === "社" || str === "社会人") return "社会人";
   if (str === "独" || str === "独L" || str === "独立" || str === "独立L") return "独L";
   return str;
+}
+
+const DRAFT_GROUPS = ["乃木坂", "櫻坂", "日向坂"];
+const DRAFT_ROSTER_MODE_LABELS = {
+  classic: "従来方式 (登場週目別・全7周)",
+  all_current: "全現役メンバー (1周)",
+  all_registered: "全登録メンバー (1周)",
+  group_current: "グループ別・現役メンバー (3周)",
+  group_registered: "グループ別・在籍経験メンバー (3周)"
+};
+const DRAFT_MODE_CONFIG = {
+  classic_waiver: { draftSystem: "waiver", draftRosterMode: "classic" },
+  classic_all_lottery: { draftSystem: "all_lottery", draftRosterMode: "classic" },
+  all_current: { draftSystem: "waiver", draftRosterMode: "all_current" },
+  all_registered: { draftSystem: "waiver", draftRosterMode: "all_registered" },
+  group_current: { draftSystem: "waiver", draftRosterMode: "group_current" },
+  group_registered: { draftSystem: "waiver", draftRosterMode: "group_registered" }
+};
+
+function applyDraftMode(mode) {
+  const config = DRAFT_MODE_CONFIG[mode] || DRAFT_MODE_CONFIG.classic_waiver;
+  draftSystem = config.draftSystem;
+  draftRosterMode = config.draftRosterMode;
+}
+
+function getDraftSessionCount() {
+  if (draftRosterMode === "group_current" || draftRosterMode === "group_registered") return 3;
+  return draftRosterMode === "classic" ? 7 : 1;
+}
+
+function getDraftSessionLabel(sessionNumber) {
+  const sessionCount = getDraftSessionCount();
+  if (draftRosterMode === "classic") return `第 ${sessionNumber} 周目 ドラフト会議 (全${sessionCount}周)`;
+  if (draftRosterMode === "group_current" || draftRosterMode === "group_registered") {
+    return `第 ${sessionNumber} 周目 ${DRAFT_GROUPS[sessionNumber - 1]} ドラフト会議 (全${sessionCount}周)`;
+  }
+  const rosterLabel = draftRosterMode === "all_current" ? "全現役メンバー" : "全登録メンバー";
+  return `${rosterLabel} ドラフト会議 (全${sessionCount}周)`;
+}
+
+function normalizeDraftGroup(group) {
+  if (group === "欅坂") return "櫻坂";
+  if (group === "けやき坂") return "日向坂";
+  return group;
+}
+
+function buildSessionPool(sessionNumber) {
+  if (draftRosterMode === "classic") {
+    return allMasterData.filter(member => Number(member.登場週目) === sessionNumber);
+  }
+  if (draftRosterMode === "all_current") {
+    return allMasterData.filter(member => member.在籍状況 === "現役");
+  }
+  if (draftRosterMode === "all_registered") return [...allMasterData];
+
+  const targetGroup = DRAFT_GROUPS[sessionNumber - 1];
+  return allMasterData.filter(member =>
+    normalizeDraftGroup(member.所属) === targetGroup &&
+    (draftRosterMode !== "group_current" || member.在籍状況 === "現役")
+  );
 }
 
 function openRuleTab() {
@@ -232,11 +293,12 @@ function parseDraftMembers(csvText) {
   return rows.slice(1).filter(row => row[0]).map(row => ({
     名前: row[0],
     所属: row[2] || "",
+    在籍状況: row[8] || "",
     出身: normalizeOrigin(row[4]),
     登場週目: Number.parseInt(row[5], 10) || 1,
     競合率: Number(row[6]) || 0,
     ポイント: Number(row[7]) || 0,
-    写真: row[9] || row[8] || ""
+    写真: row[9] || ""
   }));
 }
 
@@ -319,7 +381,7 @@ function buildBaseballVisualGround() {
 
 function initSoloMode() {
   maxTeams = parseInt(document.getElementById("teamCountSelect").value, 10) || 8;
-  draftSystem = document.getElementById("draftSystemSelect").value;
+  applyDraftMode(document.getElementById("draftModeSelect").value);
   gameMode = "solo";
   isHost = true;
   myPlayerSlot = 0;
@@ -338,7 +400,7 @@ function initSoloMode() {
   for(let i=1; i<maxTeams; i++) teams[i].name = "CPU・" + teams[i].name;
   renderTeams();
   const systemName = (draftSystem === "waiver") ? "通常ウェーバー制" : "全巡抽選制";
-  writeLog(`👤 <b>【1人プレイモード】(${maxTeams}球団制 / ${systemName})</b> を開始しました。「第1周目ドラフトを開始する」を押してください。`);
+  writeLog(`👤 <b>【1人プレイモード】(${maxTeams}球団制 / ${systemName} / ${DRAFT_ROSTER_MODE_LABELS[draftRosterMode]})</b> を開始しました。「第1周目ドラフトを開始する」を押してください。`);
 }
 
 function openMultiLobbySetup() {
@@ -349,6 +411,8 @@ function openMultiLobbySetup() {
 }
 
 function createOrJoinRoom() {
+  maxTeams = parseInt(document.getElementById("teamCountSelect").value, 10) || 8;
+  applyDraftMode(document.getElementById("draftModeSelect").value);
   const rawId = document.getElementById("inputRoomId").value.trim();
   const rId = rawId.replace(/[^a-zA-Z0-9]/g, "");
   if (!rId || rId.length < 3 || rId.length > 8) { 
@@ -387,6 +451,7 @@ function createOrJoinRoom() {
         hostSlot: 0,
         teamCount: maxTeams,
         draftSystem: draftSystem,
+        draftRosterMode: draftRosterMode,
         status: "waiting",
         slots: initialSlots
       }).then(() => {
@@ -402,6 +467,7 @@ function createOrJoinRoom() {
 
       if (data.teamCount) maxTeams = data.teamCount;
       if (data.draftSystem) draftSystem = data.draftSystem;
+      draftRosterMode = data.draftRosterMode || "classic";
 
       let assignedSlot = -1;
       for (let i = 1; i < maxTeams; i++) {
@@ -459,6 +525,7 @@ function enterLobbyWait(amIHost) {
   document.getElementById("dispRoomId").innerText = currentRoomId;
   document.getElementById("dispTeamCountBadge").innerText = `${maxTeams}球団制`;
   document.getElementById("dispSystemBadge").innerText = (draftSystem === "waiver") ? "通常ウェーバー制" : "全巡抽選制";
+  document.getElementById("dispRosterModeBadge").innerText = DRAFT_ROSTER_MODE_LABELS[draftRosterMode] || DRAFT_ROSTER_MODE_LABELS.classic;
   
   document.getElementById("hostBadge").style.display = amIHost ? "inline-block" : "none";
   document.getElementById("hostControlBtns").style.display = amIHost ? "block" : "none";
@@ -702,7 +769,7 @@ function setupDraftGameListeners() {
       picksCount: item.picksCount
     }));
     isDraftCompleted = true;
-    document.getElementById("roundDisplay").innerText = "全 7 周 ドラフト会議 完全終了";
+    document.getElementById("roundDisplay").innerText = `全 ${getDraftSessionCount()} 周 ドラフト会議 完全終了`;
     document.getElementById("teamsHeading").innerText = `【最終結果】各球団の週別獲得選手・累計総pt一覧 (全${maxTeams}球団)`;
     document.getElementById("actionControls").style.display = "none";
     document.getElementById("goToFormationBtn").style.display = "inline-block";
@@ -770,6 +837,7 @@ function confirmReset() {
   myPlayerSlot = 0;
   isHost = false;
   gameMode = "solo";
+  draftRosterMode = "classic";
   currentUserCurrentRoundPick = null;
 
   document.getElementById("modeSelectBox").style.display = "block";
@@ -821,9 +889,9 @@ function openInitialRankSetting() {
   document.getElementById("actionControls").style.display = "none";
   document.getElementById("nextSessionBtn").style.display = "none";
   document.getElementById("rankSettingArea").style.display = "block";
-  document.getElementById("currentSessionLabel").innerText = `第 1 周目 ドラフト会議 (全7周)`;
+  document.getElementById("currentSessionLabel").innerText = getDraftSessionLabel(1);
   
-  sessionPool = allMasterData.filter(m => Number(m.登場週目) === 1);
+  sessionPool = buildSessionPool(1);
   const poolCount = sessionPool.length;
   const minLimit = Math.max(1, Math.floor(poolCount / 7));
   const maxLimit = Math.max(minLimit, Math.floor(poolCount / 4));
@@ -888,7 +956,7 @@ function startSession(sNum) {
   if (boardPanel) {
     boardPanel.style.display = "block";
   }
-  sessionPool = allMasterData.filter(m => Number(m.登場週目) === sNum);
+  sessionPool = buildSessionPool(sNum);
   const poolCount = sessionPool.length;
 
   const minLimit = Math.max(1, Math.floor(poolCount / 7));
@@ -915,7 +983,7 @@ function startSession(sNum) {
   initRoundBoard(0, []);
   document.getElementById("proceedLotteryBtn").style.display = "none";
   document.getElementById("readyNextRoundBtn").style.display = "none";
-  document.getElementById("currentSessionLabel").innerText = `第 ${sNum} 周目 ドラフト会議 (全7周)`;
+  document.getElementById("currentSessionLabel").innerText = getDraftSessionLabel(sNum);
   document.getElementById("sessionPoolCount").innerText = poolCount;
   document.getElementById("quotaRange").innerText = `${minLimit}〜${maxLimit}`;
   document.getElementById("nextSessionBtn").style.display = "none";
@@ -2173,7 +2241,7 @@ function endCurrentSession() {
   
   renderTeams();
 
-  if (currentSession < 7) {
+  if (currentSession < getDraftSessionCount()) {
     document.getElementById("roundDisplay").innerText = `第 ${currentSession} 周目 終了`;
     const nextSessionBtn = document.getElementById("nextSessionBtn");
     const canStartNextSession = gameMode !== "multi" || isHost;
@@ -2183,7 +2251,7 @@ function endCurrentSession() {
     }
   } else {
     isDraftCompleted = true;
-    document.getElementById("roundDisplay").innerText = "全 7 周 ドラフト会議 完全終了";
+    document.getElementById("roundDisplay").innerText = `全 ${getDraftSessionCount()} 周 ドラフト会議 完全終了`;
     document.getElementById("teamsHeading").innerText = `【最終結果】各球団の週別獲得選手・累計総pt一覧 (全${maxTeams}球団)`;
     document.getElementById("actionControls").style.display = "none";
     document.getElementById("goToFormationBtn").style.display = "inline-block";
@@ -2205,7 +2273,7 @@ function announceFinalStandings() {
   globalStandings.sort((a, b) => (b.totalPt !== a.totalPt) ? (b.totalPt - a.totalPt) : (a.picksCount !== b.picksCount ? b.picksCount - a.picksCount : a.tiebreaker - b.tiebreaker));
 
   writeLog("<br>==================================================");
-  writeLog("🏆 <b>【全 7 周 終了】ドラフト会議 最終総合順位・獲得pt発表！</b>");
+  writeLog(`🏆 <b>【全 ${getDraftSessionCount()} 周 終了】ドラフト会議 最終総合順位・獲得pt発表！</b>`);
   writeLog("==================================================");
 
   globalStandings.forEach((item, index) => {
@@ -2229,7 +2297,7 @@ function showFinalTab() {
   const subStatus = document.getElementById("roundBoardSubStatus");
   const content = document.getElementById("roundBoardContent");
 
-  title.innerText = "🏆 全7周 ドラフト会議 最終結果発表 🏆";
+  title.innerText = `🏆 全${getDraftSessionCount()}周 ドラフト会議 最終結果発表 🏆`;
   subStatus.innerText = "球団ごとの獲得ptによる最終順位";
 
   let rowsHtml = "";
@@ -2289,6 +2357,7 @@ function closeAndReleaseRoom() {
 }
 
 async function nextSession() {
+  if (currentSession >= getDraftSessionCount()) return;
   let nextS = currentSession + 1;
   if (gameMode === "multi") {
     if (!isHost) return;
