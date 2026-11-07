@@ -1507,6 +1507,9 @@ function waitForRevealOpen(controlRef, revealKey, openedIndex) {
     return new Promise(resolve => {
       const onKeyDown = event => {
         if (event.key !== "Enter" || event.repeat || document.getElementById("draftRevealModal").style.display !== "flex") return;
+        const now = Date.now();
+        if (now - (window._lastDraftRevealEnterAt || 0) < 400) return;
+        window._lastDraftRevealEnterAt = now;
         event.preventDefault();
         document.removeEventListener("keydown", onKeyDown);
         resolve();

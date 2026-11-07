@@ -135,6 +135,7 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await guest.locator("#nominateBtn").click();
 
   for (let step = 1; step <= 8; step++) {
+    await host.waitForTimeout(450);
     await expect(host.locator("#draftRevealModal")).toBeVisible();
     await expect(host.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step));
     await expect(guest.locator("#draftRevealModal")).toBeVisible();
@@ -142,6 +143,8 @@ test("host and guest keep lottery results in their pick history", async ({ brows
     await host.keyboard.press("Enter");
     await expect(host.locator("#draftRevealGuide")).toContainText("次の球団へ");
     await expect(guest.locator("#draftRevealGuide")).toContainText("次の球団へ");
+    await expect(host.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step));
+    await host.waitForTimeout(450);
     await host.keyboard.press("Enter");
     if (step < 8) {
       await expect(host.locator("#draftRevealModal")).toHaveAttribute("data-step", String(step + 1));
@@ -232,8 +235,10 @@ test("host and guest keep lottery results in their pick history", async ({ brows
   await guest.locator("#nominateBtn").click();
   await expect(host.locator("#draftRevealModal")).toBeVisible();
   await expect(host.locator("#draftRevealTitle")).toContainText("E2E Guest");
+  await host.waitForTimeout(450);
   await host.keyboard.press("Enter");
   await expect(host.locator("#draftRevealGuide")).toContainText("次の球団へ");
+  await host.waitForTimeout(450);
   await host.keyboard.press("Enter");
   await expect(host.locator("#draftRevealModal")).toBeHidden();
 
