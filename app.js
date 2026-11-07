@@ -1369,11 +1369,7 @@ async function executeSyncedReveal(bids, attempt = 0, revealKey = null) {
     cell.classList.add("is-active-turn");
     subStatus.innerText = `【開票】${b.team.name}(${b.team.rank}位) 開票中...`;
     showDraftRevealModal(cell, b, i, openOrderBids.length, attempt);
-    if (isMulti) {
-      await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 1);
-    } else {
-      await new Promise(res => setTimeout(res, 450));
-    }
+    await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 1);
 
     cell.classList.remove("is-active-turn");
     cell.classList.add("opening-now");
@@ -1422,14 +1418,12 @@ async function executeSyncedReveal(bids, attempt = 0, revealKey = null) {
     }
 
     refreshDraftRevealCard(cell);
-    if (isMulti) {
-      document.getElementById("draftRevealGuide").innerText = isHost
+    document.getElementById("draftRevealGuide").innerText = isHost || gameMode === "solo"
         ? "Enterキーで次の球団へ進む"
         : "ホストのEnterで次の球団へ進みます";
-      if (isHost) await controlRef.update({ openedIndex: (i * 2) + 1 });
-      await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 2);
-      if (isHost) await controlRef.update({ openedIndex: (i * 2) + 2 });
-    }
+    if (isMulti && isHost) await controlRef.update({ openedIndex: (i * 2) + 1 });
+    await waitForRevealOpen(controlRef, currentRevealKey, (i * 2) + 2);
+    if (isMulti && isHost) await controlRef.update({ openedIndex: (i * 2) + 2 });
 
     await new Promise(res => setTimeout(res, 200));
   }
@@ -1487,9 +1481,9 @@ function showDraftRevealModal(cell, bid, index, total, attempt) {
   const guide = document.getElementById("draftRevealGuide");
   modal.dataset.step = String(index + 1);
   title.innerText = `${attempt === 0 ? `第${round}巡目` : `外れ指名・第${attempt}回`} 開票 ${index + 1} / ${total}　${bid.team.name} (${bid.team.rank}位)`;
-  guide.innerText = gameMode === "multi"
-    ? (isHost ? "Enterキーで指名者名を公開" : "ホストの開票操作を待っています")
-    : "指名ボードに反映します";
+  guide.innerText = isHost || gameMode === "solo"
+    ? "Enterキーで指名者名を公開"
+    : "ホストの開票操作を待っています";
   const preview = cell.cloneNode(true);
   preview.removeAttribute("id");
   document.getElementById("draftRevealCard").replaceChildren(preview);
@@ -1503,7 +1497,7 @@ function refreshDraftRevealCard(cell) {
 }
 
 function waitForRevealOpen(controlRef, revealKey, openedIndex) {
-  if (isHost) {
+  if (isHost || gameMode === "solo") {
     return new Promise(resolve => {
       const onKeyDown = event => {
         if (event.key !== "Enter" || event.repeat || document.getElementById("draftRevealModal").style.display !== "flex") return;
