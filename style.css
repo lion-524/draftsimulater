@@ -32,6 +32,9 @@
   .log-terminal { height: 170px; background: #212121; color: #69f0ae; font-family: 'Courier New', monospace; padding: 12px; border-radius: 6px; overflow-y: scroll; font-size: 13px; line-height: 1.6; }
   
   .controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .pick-filters { display: flex; flex: 1 0 100%; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .pick-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: bold; color: #546e7a; }
+  .pick-filters select, .pick-filters input { min-width: 130px; padding: 7px; }
   select { padding: 9px; border: 1px solid #b0bec5; border-radius: 4px; font-size: 14px; background: #fff; }
   #playerDropdown { flex: 1; min-width: 280px; }
   
@@ -310,6 +313,7 @@
   .stage-export-capture .stage-row { flex-wrap: nowrap; }
   .stage-front-edge { border-bottom: 3px solid #e91e63; width: 60%; margin: 15px auto 0 auto; font-size: 11px; letter-spacing: 2px; color: #f48fb1; padding-bottom: 5px; }
   .stage-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  #sportPanelIdol .formation-card input[type="range"] { vertical-align: middle; }
   .member-slot { width: 85px; display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 4px; }
   .member-slot.is-center { background: rgba(233, 30, 99, 0.25); border-color: #ff4081; transform: scale(1.08); box-shadow: 0 0 12px rgba(255, 64, 129, 0.5); }
   .member-avatar { width: 48px; height: 60px; border-radius: 4px; background: #455a64; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 6px; overflow: hidden; }

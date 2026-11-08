@@ -69,6 +69,7 @@ let gameMode = "solo";
 let currentRoomId = null;
 let myPlayerSlot = 0;
 let isHost = false;
+let isSpectatorHost = false;
 let maxTeams = 8;
 let draftSystem = "waiver";
 let draftRosterMode = "classic";
@@ -292,13 +293,15 @@ function parseDraftMembers(csvText) {
   const rows = parseCsv(csvText);
   return rows.slice(1).filter(row => row[0]).map(row => ({
     名前: row[0],
-    所属: row[2] || "",
-    在籍状況: row[8] || "",
-    出身: normalizeOrigin(row[4]),
-    登場週目: Number.parseInt(row[5], 10) || 1,
-    競合率: Number(row[6]) || 0,
-    ポイント: Number(row[7]) || 0,
-    写真: row[9] || ""
+    読み: row[1] || "",
+    所属: row[3] || "",
+    加入期: row[4] || "",
+    在籍状況: row[9] || "",
+    出身: normalizeOrigin(row[5]),
+    登場週目: Number.parseInt(row[6], 10) || 1,
+    競合率: Number(row[7]) || 0,
+    ポイント: Number(row[8]) || 0,
+    写真: row[10] || ""
   }));
 }
 
@@ -413,6 +416,7 @@ function openMultiLobbySetup() {
 function createOrJoinRoom() {
   maxTeams = parseInt(document.getElementById("teamCountSelect").value, 10) || 8;
   applyDraftMode(document.getElementById("draftModeSelect").value);
+  const requestedSpectatorHost = document.getElementById("spectatorHostCheckbox").checked;
   const rawId = document.getElementById("inputRoomId").value.trim();
   const rId = rawId.replace(/[^a-zA-Z0-9]/g, "");
   if (!rId || rId.length < 3 || rId.length > 8) { 
@@ -421,34 +425,47 @@ function createOrJoinRoom() {
   }
   currentRoomId = rId;
 
-  let inputName = prompt("あなたのユーザーネームを入力してください:", "プレイヤー");
-  if (!inputName || !inputName.trim()) {
-    inputName = "プレイヤー" + Math.floor(Math.random() * 900 + 100);
-  }
-  const myUserName = filterInappropriateText(inputName.trim());
+  const promptForUserName = () => {
+    let inputName = prompt("あなたの球団名を入力してください:", "プレイヤー");
+    if (!inputName || !inputName.trim()) {
+      inputName = "プレイヤー" + Math.floor(Math.random() * 900 + 100);
+    }
+    return filterInappropriateText(inputName.trim());
+  };
 
   writeLog(`🌐 部屋番号 <b>${currentRoomId}</b> にアクセス中...`);
   const roomRef = db.ref(`rooms/${currentRoomId}`);
 
   roomRef.once('value').then(snapshot => {
     const data = snapshot.val();
-    const isRoomAbandoned = data && (!data.slots || !data.slots.slot_0 || data.slots.slot_0.isCpu === true || data.status === "closed");
+    const isRoomAbandoned = data && (
+      !data.slots ||
+      (!data.spectatorHost && (!data.slots.slot_0 || data.slots.slot_0.isCpu === true)) ||
+      data.status === "closed"
+    );
 
     if (!data || isRoomAbandoned) {
       isHost = true;
-      myPlayerSlot = 0;
+      isSpectatorHost = requestedSpectatorHost;
+      myPlayerSlot = isSpectatorHost ? -1 : 0;
+      const myUserName = isSpectatorHost ? null : promptForUserName();
 
       const initialSlots = {};
       const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
       for (let i = 0; i < maxTeams; i++) {
         initialSlots[`slot_${i}`] = (i === 0) 
-          ? { isCpu: false, name: myUserName, rank: maxTeams } 
+          ? {
+              isCpu: isSpectatorHost,
+              name: isSpectatorHost ? `CPU・球団${letters[i]}` : myUserName,
+              rank: maxTeams
+            }
           : { isCpu: true, name: `CPU・球団${letters[i]}`, rank: maxTeams - i };
       }
 
       return roomRef.set({
         createdAt: Date.now(),
-        hostSlot: 0,
+        hostSlot: isSpectatorHost ? -1 : 0,
+        spectatorHost: isSpectatorHost,
         teamCount: maxTeams,
         draftSystem: draftSystem,
         draftRosterMode: draftRosterMode,
@@ -468,9 +485,11 @@ function createOrJoinRoom() {
       if (data.teamCount) maxTeams = data.teamCount;
       if (data.draftSystem) draftSystem = data.draftSystem;
       draftRosterMode = data.draftRosterMode || "classic";
+      isSpectatorHost = false;
 
       let assignedSlot = -1;
-      for (let i = 1; i < maxTeams; i++) {
+      const firstJoinableSlot = data.spectatorHost ? 0 : 1;
+      for (let i = firstJoinableSlot; i < maxTeams; i++) {
         const slotData = data.slots[`slot_${i}`];
         if (slotData && slotData.isCpu === true) {
           assignedSlot = i;
@@ -485,6 +504,7 @@ function createOrJoinRoom() {
 
       isHost = false;
       myPlayerSlot = assignedSlot;
+      const myUserName = promptForUserName();
 
       return roomRef.child(`slots/slot_${assignedSlot}`).update({
         isCpu: false,
@@ -504,12 +524,12 @@ function createOrJoinRoom() {
 function setupDisconnectionHandling() {
   if (!currentRoomId || !db) return;
   const roomRef = db.ref(`rooms/${currentRoomId}`);
-  const mySlotRef = roomRef.child(`slots/slot_${myPlayerSlot}`);
   const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
   if (isHost) {
     roomRef.onDisconnect().remove();
   } else {
+    const mySlotRef = roomRef.child(`slots/slot_${myPlayerSlot}`);
     mySlotRef.onDisconnect().set({
       isCpu: true,
       name: `CPU・球団${letters[myPlayerSlot]}`,
@@ -527,7 +547,9 @@ function enterLobbyWait(amIHost) {
   document.getElementById("dispSystemBadge").innerText = (draftSystem === "waiver") ? "通常ウェーバー制" : "全巡抽選制";
   document.getElementById("dispRosterModeBadge").innerText = DRAFT_ROSTER_MODE_LABELS[draftRosterMode] || DRAFT_ROSTER_MODE_LABELS.classic;
   
-  document.getElementById("hostBadge").style.display = amIHost ? "inline-block" : "none";
+  const hostBadge = document.getElementById("hostBadge");
+  hostBadge.innerText = isSpectatorHost ? "観戦ホスト" : "ホスト(親機)";
+  hostBadge.style.display = amIHost ? "inline-block" : "none";
   document.getElementById("hostControlBtns").style.display = amIHost ? "block" : "none";
 
   let isDraftStarted = false;
@@ -559,6 +581,10 @@ function enterLobbyWait(amIHost) {
             ${Array.from({ length: maxTeams }, (_, index) => index + 1).map(rank => `<option value="${rank}" ${rank === teams[i].rank ? 'selected' : ''}>${rank}位</option>`).join("")}
           </select>
         </label>
+        <div style="display:flex; gap:5px; margin-top:6px;">
+          <input id="lobbyTeamNameInput" type="text" maxlength="24" aria-label="球団名" value="${cleanName}" style="min-width:0; width:100%; padding:4px;">
+          <button type="button" onclick="changeLobbyTeamName()" style="padding:4px 8px; font-size:12px;">変更</button>
+        </div>
       ` : "";
       slotDiv.innerHTML = `
         <div style="font-size:12px; color:#546e7a;">スロット ${i + 1} (${teams[i].rank}位)</div>
@@ -609,6 +635,32 @@ function enterLobbyWait(amIHost) {
       alert("ホストによってルームが開放・解散されました。初期画面に戻ります。");
       confirmReset();
     }
+  });
+}
+
+function changeLobbyTeamName() {
+  const input = document.getElementById("lobbyTeamNameInput");
+  if (!currentRoomId || myPlayerSlot < 0 || !input) return;
+
+  const name = filterInappropriateText(input.value.trim());
+  if (!name || name.length > 24) {
+    alert("球団名は1〜24文字で入力してください。");
+    return;
+  }
+
+  const roomRef = db.ref(`rooms/${currentRoomId}`);
+  roomRef.once("value").then(snapshot => {
+    const room = snapshot.val();
+    const mySlot = room?.slots?.[`slot_${myPlayerSlot}`];
+    if (!room || room.status !== "waiting" || !mySlot || mySlot.isCpu) {
+      writeLog("球団名を変更できませんでした。ドラフト開始前にもう一度お試しください。");
+      return;
+    }
+    return roomRef.child(`slots/slot_${myPlayerSlot}/name`).set(name).then(() => {
+      writeLog(`球団名を「${escapeHtml(name)}」に変更しました。`);
+    });
+  }).catch(error => {
+    writeLog(`<span style="color:#ff5252;">球団名の変更に失敗しました: ${error.message}</span>`);
   });
 }
 
@@ -872,6 +924,7 @@ function confirmReset() {
   currentRoomId = null;
   myPlayerSlot = 0;
   isHost = false;
+  isSpectatorHost = false;
   gameMode = "solo";
   draftRosterMode = "classic";
   currentUserCurrentRoundPick = null;
@@ -883,6 +936,7 @@ function confirmReset() {
   document.getElementById("hostControlBtns").style.display = "none";
   document.getElementById("inputRoomId").disabled = false;
   document.getElementById("inputRoomId").value = "";
+  document.getElementById("spectatorHostCheckbox").checked = false;
 
   document.getElementById("sessionBar").style.display = "none";
   document.getElementById("controlPanel").style.display = "none";
@@ -1025,7 +1079,9 @@ function startSession(sNum) {
   document.getElementById("nextSessionBtn").style.display = "none";
 
   writeLog(`<br>==================================================`);
-  writeLog(`🎯 <b>【第 ${sNum} 周目 ドラフト会議 開始】</b> (自チーム順位: ${teams[myPlayerSlot].rank}位 / 全${maxTeams}球団 / ${draftSystem === 'waiver' ? '通常ウェーバー制' : '全巡抽選制'})`);
+  const myTeam = teams[myPlayerSlot];
+  const teamStatus = myTeam ? `自チーム順位: ${myTeam.rank}位` : "観戦中";
+  writeLog(`🎯 <b>【第 ${sNum} 周目 ドラフト会議 開始】</b> (${teamStatus} / 全${maxTeams}球団 / ${draftSystem === 'waiver' ? '通常ウェーバー制' : '全巡抽選制'})`);
   writeLog(`==================================================`);
 
   renderTeams();
@@ -1054,7 +1110,8 @@ function runRound() {
       db.ref(`rooms/${currentRoomId}/reBids`).remove();
     }
     
-    if (teams[myPlayerSlot].isFinished) {
+    const myTeam = teams[myPlayerSlot];
+    if (myTeam?.isFinished) {
       document.getElementById("actionControls").style.display = "none";
       currentUserCurrentRoundPick = {
         name: "【今周 選択終了】",
@@ -1070,8 +1127,10 @@ function runRound() {
           slot: myPlayerSlot
         });
       }
-    } else {
+    } else if (myTeam) {
       prepareUserSelection(`第 ${round} 巡目 入札メンバーを選択してください`);
+    } else {
+      document.getElementById("actionControls").style.display = "none";
     }
 
     if (isHost && gameMode === "multi") {
@@ -1083,21 +1142,63 @@ function runRound() {
 }
 
 function prepareUserSelection(promptText, allowPass = true) {
-  const select = document.getElementById("playerDropdown");
-  select.innerHTML = "";
-  
-  const displayPool = [...sessionPool].sort((a, b) => a.名前.localeCompare(b.名前, 'ja'));
-  displayPool.forEach(p => {
-    const originLabel = normalizeOrigin(p.出身);
-    const opt = document.createElement("option");
-    opt.value = p.名前;
-    opt.innerText = `${p.名前} 【${originLabel}】${p.所属 ? ` (${p.所属})` : ''}`;
-    select.appendChild(opt);
-  });
-
+  const termFilter = document.getElementById("pickTermFilter");
+  if (termFilter) {
+    const selectedTerm = termFilter.value;
+    const terms = [...new Set(sessionPool.map(member => member.加入期).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "ja", { numeric: true }));
+    termFilter.innerHTML = `<option value="">すべて</option>`;
+    terms.forEach(term => {
+      const option = document.createElement("option");
+      option.value = term;
+      option.textContent = term;
+      termFilter.appendChild(option);
+    });
+    if (terms.includes(selectedTerm)) termFilter.value = selectedTerm;
+  }
   document.getElementById("actionControls").style.display = "flex";
   document.getElementById("nominateBtn").disabled = false;
   document.getElementById("passBtn").disabled = !allowPass || (round === 1 && !isReNomination && draftSystem === "waiver");
+  filterPickCandidates();
+}
+
+function filterPickCandidates() {
+  const select = document.getElementById("playerDropdown");
+  if (!select) return;
+
+  const group = document.getElementById("pickGroupFilter")?.value || "";
+  const term = document.getElementById("pickTermFilter")?.value || "";
+  const initialInput = document.getElementById("pickInitialFilter");
+  const initial = initialInput?.value.trim() || "";
+  if (initial && !/^[ぁ-ゖ]$/u.test(initial)) {
+    initialInput.setCustomValidity("ひらがな1字で入力してください。");
+  } else if (initialInput) {
+    initialInput.setCustomValidity("");
+  }
+
+  const previousValue = select.value;
+  const collator = new Intl.Collator("ja", { usage: "sort", sensitivity: "base" });
+  const filtered = sessionPool
+    .filter(member => !group || normalizeDraftGroup(member.所属) === group)
+    .filter(member => !term || member.加入期 === term)
+    .filter(member => !initial || !initialInput?.validity.customError ||
+      String(member.読み || "").startsWith(initial))
+    .sort((a, b) => collator.compare(a.読み || a.名前, b.読み || b.名前) || collator.compare(a.名前, b.名前));
+
+  select.replaceChildren();
+  filtered.forEach(member => {
+    const option = document.createElement("option");
+    option.value = member.名前;
+    option.textContent = `${member.名前} 【${normalizeOrigin(member.出身)}】${member.所属 ? ` (${member.所属})` : ""}`;
+    select.appendChild(option);
+  });
+  if (!filtered.some(member => member.名前 === previousValue) && filtered.length > 0) {
+    select.value = filtered[0].名前;
+  } else if (previousValue) {
+    select.value = previousValue;
+  }
+  select.disabled = filtered.length === 0;
+  document.getElementById("nominateBtn").disabled = filtered.length === 0;
 }
 
 function updateUserPickStatusBanner() {
@@ -1913,7 +2014,14 @@ function promptNextRoundReady() {
   updateRoundBoardVisualizer(round);
   renderTeams();
 
-  if (teams[myPlayerSlot].isFinished) {
+  const myTeam = teams[myPlayerSlot];
+  if (!myTeam) {
+    document.getElementById("readyNextRoundBtn").style.display = "none";
+    writeLog(`<br>📋 <b>第 ${round} 巡目の指名が完了しました。観戦中です。参加者の確認完了を待機しています。</b>`);
+    return;
+  }
+
+  if (myTeam.isFinished) {
     if (gameMode === "multi") {
       db.ref(`rooms/${currentRoomId}/readySlots/slot_${myPlayerSlot}`).set(true);
     }
@@ -3035,17 +3143,27 @@ function getUserPicksOptionsHtml() {
 }
 
 function renderIdolForm() {
-  const selectEl = document.getElementById("idolFormationSelect");
-  if (!selectEl) return;
+  const row1Control = document.getElementById("idolRow1Count");
+  const row2Control = document.getElementById("idolRow2Count");
+  const row3Control = document.getElementById("idolRow3Count");
+  if (!row1Control || !row2Control || !row3Control) return;
 
-  const formKey = selectEl.value;
-  const parts = formKey.split("-").map(v => parseInt(v, 10));
-  const row1 = parts[0] || 4;
-  const row2 = parts[1] || 5;
-  const row3 = parts[2] || 7;
+  const row1 = Number(row1Control.value);
+  const row2 = Number(row2Control.value);
+  const row3 = Number(row3Control.value);
+  document.getElementById("idolRow1CountValue").value = row1;
+  document.getElementById("idolRow2CountValue").value = row2;
+  document.getElementById("idolRow3CountValue").value = row3;
 
   const container = document.getElementById("idolFormRows");
   if (!container) return;
+
+  const previousSelections = new Map(
+    [...container.querySelectorAll(".idol-select")].map(select => [
+      `${select.dataset.row}-${select.dataset.idx}`,
+      select.value
+    ])
+  );
   
   container.innerHTML = "";
   const optionsHtml = getUserPicksOptionsHtml();
@@ -3077,6 +3195,11 @@ function renderIdolForm() {
         <span class="pos-label" style="font-size:11px; margin-bottom:2px; ${isCenter ? 'color:#e91e63; font-weight:900;' : 'color:#b0bec5;'}">${posLabel}:</span>
         <select class="formation-select idol-select" data-row="${rowId}" data-idx="${i}" onchange="updateStageVisualizer()" style="padding:6px; font-size:12px; background:#222; color:#fff; border:1px solid #555; border-radius:4px;">${optionsHtml}</select>
       `;
+      const select = item.querySelector("select");
+      const previousSelection = previousSelections.get(`${rowId}-${i}`);
+      if (previousSelection && [...select.options].some(option => option.value === previousSelection)) {
+        select.value = previousSelection;
+      }
       grid.appendChild(item);
     }
     div.appendChild(grid);

@@ -78,6 +78,10 @@
       <input type="text" id="inputRoomId" placeholder="部屋番号 (例: 777)" style="padding:9px; border:1px solid #b0bec5; border-radius:4px; font-size:15px; font-weight:bold; width:160px; text-align:center;">
       <button onclick="createOrJoinRoom()" style="background:#00897b;">部屋を作成 / 参加</button>
     </div>
+    <label style="display:block; margin-top:10px; font-size:13px;">
+      <input type="checkbox" id="spectatorHostCheckbox">
+      部屋を作成する場合、球団枠に入らず観戦ホストになる
+    </label>
     
     <div id="roomWaitArea" style="display:none; margin-top:20px;">
       <div style="font-weight:bold; font-size:16px; color:#004d40; margin-bottom:8px;">
@@ -117,6 +121,24 @@
     </div>
 
     <div class="controls" id="actionControls" style="display:none;">
+      <div class="pick-filters" id="pickFilters">
+        <label>所属グループ
+          <select id="pickGroupFilter" aria-label="所属グループで絞り込み" onchange="filterPickCandidates()">
+            <option value="">すべて</option>
+            <option value="乃木坂">乃木坂</option>
+            <option value="櫻坂">櫻坂</option>
+            <option value="日向坂">日向坂</option>
+          </select>
+        </label>
+        <label>加入期
+          <select id="pickTermFilter" aria-label="加入期で絞り込み" onchange="filterPickCandidates()">
+            <option value="">すべて</option>
+          </select>
+        </label>
+        <label>頭文字
+          <input id="pickInitialFilter" type="text" maxlength="1" inputmode="kana" placeholder="ひらがな1字" aria-label="ひらがな頭文字で絞り込み" oninput="filterPickCandidates()">
+        </label>
+      </div>
       <select id="playerDropdown"></select>
       <button id="nominateBtn" onclick="onUserNominate()">指名を確定する</button>
       <button id="passBtn" class="btn-pass" onclick="onUserPass()">今周の選択を終了する</button>
@@ -186,21 +208,10 @@
     <div id="sportPanelIdol" class="sport-panel">
       <div class="formation-card">
         <div style="margin-bottom:15px; display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
-          <strong>選抜フォーメーション形式:</strong>
-          <select id="idolFormationSelect" onchange="renderIdolForm()" style="min-width: 260px;">
-            <optgroup label="16人選抜">
-              <option value="4-5-7" selected>16人選抜 (4 - 5 - 7: Wセンター)</option>
-              <option value="3-6-7">16人選抜 (3 - 6 - 7: 単独センター)</option>
-            </optgroup>
-            <optgroup label="18人選抜">
-              <option value="5-6-7">18人選抜 (5 - 6 - 7: 単独センター)</option>
-              <option value="4-5-9">18人選抜 (4 - 5 - 9: Wセンター)</option>
-            </optgroup>
-            <optgroup label="20人選抜">
-              <option value="5-7-8">20人選抜 (5 - 7 - 8: 単独センター)</option>
-              <option value="4-7-9">20人選抜 (4 - 7 - 9: Wセンター)</option>
-            </optgroup>
-          </select>
+          <strong>各列の人数:</strong>
+          <label>1列目 <input id="idolRow1Count" type="range" min="3" max="7" value="4" oninput="renderIdolForm()"> <output id="idolRow1CountValue">4</output></label>
+          <label>2列目 <input id="idolRow2Count" type="range" min="4" max="9" value="5" oninput="renderIdolForm()"> <output id="idolRow2CountValue">5</output></label>
+          <label>3列目 <input id="idolRow3Count" type="range" min="4" max="9" value="7" oninput="renderIdolForm()"> <output id="idolRow3CountValue">7</output></label>
         </div>
 
         <div id="idolFormRows"></div>

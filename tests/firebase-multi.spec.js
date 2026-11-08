@@ -6,6 +6,9 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
   await expect(page.locator("#draftModeSelect option")).toHaveCount(6);
 
   const pools = await page.evaluate(() => {
+    const readingSamples = ["岩瀬 佑美子", "衛藤 美彩", "小坂 菜緒", "海邉 朱莉", "森平 麗心"].map(name =>
+      allMasterData.find(member => member.名前 === name)?.読み
+    );
     const modeMappings = [...document.querySelectorAll("#draftModeSelect option")].map(option => {
       applyDraftMode(option.value);
       return `${draftSystem}:${draftRosterMode}`;
@@ -26,6 +29,8 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
     draftRosterMode = "classic";
     return {
       currentCount,
+      readingCount: allMasterData.filter(member => member.読み).length,
+      readingSamples,
       modeMappings,
       currentMembersOnly,
       registeredCount,
@@ -40,6 +45,8 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
   });
 
   expect(pools.currentCount).toBe(89);
+  expect(pools.readingCount).toBe(204);
+  expect(pools.readingSamples).toEqual(["いわせゆみこ", "えとうみさ", "こさかなお", "かいべあかり", "もりひらうるみ"]);
   expect(pools.modeMappings).toEqual([
     "waiver:classic",
     "all_lottery:classic",
@@ -54,6 +61,101 @@ test("roster modes create the expected candidate pools", async ({ page }) => {
   expect(pools.registeredByGroup.reduce((sum, count) => sum + count, 0)).toBe(204);
   expect(pools.classicFirstSessionCount).toBeGreaterThan(0);
   expect(pools.sessionCounts).toEqual([7, 1, 1, 3, 3]);
+});
+
+test("pick filters narrow by group, generation, and hiragana initial in gojuon order", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#loading")).toBeHidden();
+
+  await page.evaluate(() => {
+    document.getElementById("controlPanel").style.display = "block";
+    sessionPool = [
+      { 名前: "あおい", 読み: "あおい", 所属: "乃木坂", 加入期: "1期", 出身: "大卒" },
+      { 名前: "かえで", 読み: "かえで", 所属: "櫻坂", 加入期: "2期", 出身: "大卒" },
+      { 名前: "あかり", 読み: "あかり", 所属: "乃木坂", 加入期: "2期", 出身: "大卒" }
+    ];
+    prepareUserSelection("テスト");
+  });
+
+  await expect(page.locator("#playerDropdown option")).toHaveText(["あおい 【大卒】 (乃木坂)", "あかり 【大卒】 (乃木坂)", "かえで 【大卒】 (櫻坂)"]);
+  await page.getByLabel("所属グループで絞り込み").selectOption("乃木坂");
+  await page.getByLabel("加入期で絞り込み").selectOption("2期");
+  await page.getByLabel("ひらがな頭文字で絞り込み").fill("あ");
+  await expect(page.locator("#playerDropdown option")).toHaveText(["あかり 【大卒】 (乃木坂)"]);
+});
+
+test("idol formation has three adjustable columns within the requested ranges", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#loading")).toBeHidden();
+  await page.evaluate(() => {
+    document.getElementById("formationSection").style.display = "block";
+    initTeams();
+    window.switchSportTab("idol");
+  });
+
+  await expect(page.locator("#stageFrontRow .member-slot")).toHaveCount(4);
+  await expect(page.locator("#stageMiddleRow .member-slot")).toHaveCount(5);
+  await expect(page.locator("#stageBackRow .member-slot")).toHaveCount(7);
+  await page.locator("#idolRow1Count").evaluate(element => {
+    element.value = "7";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.locator("#idolRow2Count").evaluate(element => {
+    element.value = "9";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.locator("#idolRow3Count").evaluate(element => {
+    element.value = "4";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await expect(page.locator("#stageFrontRow .member-slot")).toHaveCount(7);
+  await expect(page.locator("#stageMiddleRow .member-slot")).toHaveCount(9);
+  await expect(page.locator("#stageBackRow .member-slot")).toHaveCount(4);
+  await expect(page.locator("#idolRow1Count")).toHaveAttribute("min", "3");
+  await expect(page.locator("#idolRow1Count")).toHaveAttribute("max", "7");
+  await expect(page.locator("#idolRow2Count")).toHaveAttribute("min", "4");
+  await expect(page.locator("#idolRow2Count")).toHaveAttribute("max", "9");
+  await expect(page.locator("#idolRow3Count")).toHaveAttribute("min", "4");
+  await expect(page.locator("#idolRow3Count")).toHaveAttribute("max", "9");
+});
+
+test("spectator hosts leave all team slots open and joined players can rename their team", async ({ browser, baseURL }) => {
+  const host = await browser.newPage();
+  const guest = await browser.newPage();
+  guest.on("dialog", dialog => dialog.accept("E2E Guest"));
+
+  await host.goto(`${baseURL}/?emulator=1`);
+  await host.getByRole("button", { name: /オンライン対戦/ }).click();
+  await host.locator("#teamCountSelect").selectOption("5");
+  await host.locator("#inputRoomId").fill("e2espec");
+  await host.locator("#spectatorHostCheckbox").check();
+  await host.getByRole("button", { name: "部屋を作成 / 参加" }).click();
+
+  await expect(host.locator("#hostBadge")).toHaveText("観戦ホスト");
+  await expect(host.locator("#lobbySlotsGrid .lobby-slot")).toHaveCount(5);
+  expect(await host.evaluate(() => myPlayerSlot)).toBe(-1);
+  expect(await host.evaluate(() => teams.every(team => team.isCpu))).toBe(true);
+
+  await guest.goto(`${baseURL}/?emulator=1`);
+  await guest.getByRole("button", { name: /オンライン対戦/ }).click();
+  await guest.locator("#inputRoomId").fill("e2espec");
+  await guest.getByRole("button", { name: "部屋を作成 / 参加" }).click();
+  await expect(guest.getByLabel("球団名")).toBeVisible();
+  await guest.getByLabel("球団名").fill("新しい球団");
+  await guest.getByRole("button", { name: "変更" }).click();
+  await expect(guest.locator("#logTerminal")).toContainText("球団名を「新しい球団」に変更しました。");
+  await expect(host.locator("#lobbySlotsGrid .lobby-slot").first()).toContainText("新しい球団");
+
+  await host.locator("#multiStartBtn").click();
+  await expect(host.locator("#roundDisplay")).toBeVisible();
+  await expect(guest.locator("#roundDisplay")).toBeVisible();
+  expect(await host.evaluate(() => teams[0].name)).toBe("新しい球団");
+  expect(await guest.evaluate(() => teams[0].name)).toBe("新しい球団 (あなた)");
+  await expect(host.locator("#actionControls")).toBeHidden();
+  await expect(guest.locator("#actionControls")).toBeVisible();
+
+  await host.close();
+  await guest.close();
 });
 
 test("host and guest keep lottery results in their pick history", async ({ browser, baseURL }) => {
